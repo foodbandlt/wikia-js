@@ -167,88 +167,111 @@ if (typeof LIR === "undefined"){
 					/* If not, then get file usage for image */
 					$.getJSON("/api.php?action=query&list=imageusage&iutitle=File:"+encodeURIComponent(oldImageName.replace(/ /g, "_")).replace(/"/g, "%22").replace(/'/g, "%27")+"&iulimit=500&format=json", function(result){
 						imageUsage = result.query.imageusage;
-						if (console) console.log("Image usage successfully retrieved");
-						if (imageUsage.length > 0){
 						
-							/* Resets queue-related variables if only renaming and replacing a single image */
-							if (LIR.type == "single"){
-								LIR.queueData = [];
-								LIR.pageKey = [];
-												
-								/* Adds pages image is used on to window.LIR.pageKey to help keep track of pages in window.LIR.pageData later on */
-								for (current.page = 0; current.page < imageUsage.length; current.page++){
-									if (console) console.log("Beginning page "+current.page);
-									
-									var title = imageUsage[current.page].title;
-
-									if (LIR.pageKey.indexOf(title) == -1){
-										LIR.pageKey[LIR.pageKey.length] = title;
-									}
-									
-									/* Temporary until Wikia fixes issue with editing blog comments through the API */
-									if (title.search(/User blog comment/i) == -1){
-										LIR.queueData[LIR.queueData.length] = {
-											oldImage: oldImageName,
-											newImage: newImageName,
-											title: title,
-											reason: reason
-										}
-									}else{
-										LIRBlogComment = true;
-									}
-								}
-							}else{
-								LIR.queueData[LIR.queueData.length] = {
-									oldImage: oldImageName,
-									newImage: newImageName,
-									reason: reason
-								}
-									
-								for (current.page = 0; current.page < imageUsage.length; current.page++){
-									var title = imageUsage[current.page].title;
-									/* Temporary until Wikia fixes issue with editing blog comments through the API */
-									if (title.search(/User blog comment/i) != -1){
-										LIRBlogComment = true;
-									}
-								}
-							}
+						$.getJSON("/api.php?action=query&blnamespace=0&bllimit=500&list=backlinks&bltitle=File:" + encodeURIComponent(oldImageName.replace(/ /g, "_")).replace(/"/g, "%22").replace(/'/g, "%27") + "&format=json", function(result){
+							imageLinks = result.query.backlinks;
 							
-							/* Temporary until Wikia fixes issue with editing blog comments through the API */
-							if (typeof(LIRBlogComment) === "undefined"){
-								/* Stores queue if renaming multiple images, or updates file usage if only renaming one */
-								if (LIR.type == "multi"){
-									LIR.storeQueue(function() {
-										LIR.started = false;
-										localStorage.LIRQueuedUpdatesPos++;
-										window.location = "/wiki/File:" + encodeURIComponent(oldImageName.replace(/ /g, "_")).replace(/"/g, "%22").replace(/'/g, "%27");
-									});
+							if (console) console.log("Image usage successfully retrieved");
+							if (imageUsage.length > 0 || imagesLinks.length > 0){
+							
+								/* Resets queue-related variables if only renaming and replacing a single image */
+								if (LIR.type == "single"){
+									LIR.queueData = [];
+									LIR.pageKey = [];
+													
+									/* Adds pages image is used on to window.LIR.pageKey to help keep track of pages in window.LIR.pageData later on */
+									for (current.page = 0; current.page < imageUsage.length; current.page++){
+										var title = imageUsage[current.page].title;
+
+										if (LIR.pageKey.indexOf(title) == -1){
+											LIR.pageKey[LIR.pageKey.length] = title;
+										}
+										
+										/* Temporary until Wikia fixes issue with editing blog comments through the API */
+										if (title.search(/User blog comment/i) == -1){
+											LIR.queueData[LIR.queueData.length] = {
+												oldImage: oldImageName,
+												newImage: newImageName,
+												title: title,
+												reason: reason
+											}
+										}else{
+											LIRBlogComment = true;
+										}
+									}
+									
+									for (current.page = 0; current.page < imageLinks.length; current.page++){
+										var title = imageLinks[current.page].title;
+
+										if (LIR.pageKey.indexOf(title) == -1){
+											LIR.pageKey[LIR.pageKey.length] = title;
+										}
+										
+										/* Temporary until Wikia fixes issue with editing blog comments through the API */
+										if (title.search(/User blog comment/i) == -1){
+											LIR.queueData[LIR.queueData.length] = {
+												oldImage: oldImageName,
+												newImage: newImageName,
+												title: title,
+												reason: reason
+											}
+										}else{
+											LIRBlogComment = true;
+										}
+									}
 								}else{
-									/* This may seem odd, but because I use LIR.processQueue() for both single and multiple image 
-										updating, it requires LIR.started to be false to start */
-									LIR.started = false;
-									LIR.processQueue(function(){
-										$("#movepage").submit();
-									});
+									LIR.queueData[LIR.queueData.length] = {
+										oldImage: oldImageName,
+										newImage: newImageName,
+										reason: reason
+									}
+										
+									for (current.page = 0; current.page < imageUsage.length; current.page++){
+										var title = imageUsage[current.page].title;
+										/* Temporary until Wikia fixes issue with editing blog comments through the API */
+										if (title.search(/User blog comment/i) != -1){
+											LIRBlogComment = true;
+										}
+									}
 								}
+								
+								/* Temporary until Wikia fixes issue with editing blog comments through the API */
+								if (typeof(LIRBlogComment) === "undefined"){
+									/* Stores queue if renaming multiple images, or updates file usage if only renaming one */
+									if (LIR.type == "multi"){
+										LIR.storeQueue(function() {
+											LIR.started = false;
+											localStorage.LIRQueuedUpdatesPos++;
+											window.location = "/wiki/File:" + encodeURIComponent(oldImageName.replace(/ /g, "_")).replace(/"/g, "%22").replace(/'/g, "%27");
+										});
+									}else{
+										/* This may seem odd, but because I use LIR.processQueue() for both single and multiple image 
+											updating, it requires LIR.started to be false to start */
+										LIR.started = false;
+										LIR.processQueue(function(){
+											$("#movepage").submit();
+										});
+									}
+								}else{
+									if (typeof LIR.queuePosition !== "undefined"){
+										localStorage.LIRQueuedUpdatesPos++;
+										delete LIR.queuePosition;
+									}
+									LIR.updateStatus(false, "");
+									alert("One of pages this image is used on is a blog comment. There is currently a bug with Wikia's API concerning editing blog comments.  Please update the file links manually.");
+								}
+								
+
 							}else{
+								/* Else, prompt to use normal renaming, since this is kind of pointless otherwise */
+								alert("Image is not being used on any pages.  Please use the regular rename button.");
+								LIR.started = false;
 								if (typeof LIR.queuePosition !== "undefined"){
 									localStorage.LIRQueuedUpdatesPos++;
 									delete LIR.queuePosition;
 								}
 								LIR.updateStatus(false, "");
-								alert("One of pages this image is used on is a blog comment. There is currently a bug with Wikia's API concerning editing blog comments.  Please update the file links manually.");
 							}
-							
-
-						}else{
-							/* Else, prompt to use normal renaming, since this is kind of pointless otherwise */
-							alert("Image is not being used on any pages.  Please use the regular rename button.");
-							LIR.started = false;
-							if (typeof LIR.queuePosition !== "undefined"){
-								localStorage.LIRQueuedUpdatesPos++;
-								delete LIR.queuePosition;
-							}
-							LIR.updateStatus(false, "");
 						}
 					});
 				}else{
@@ -278,24 +301,44 @@ if (typeof LIR === "undefined"){
 		getUsage: function(index, callback){
 			$.getJSON("/api.php?action=query&list=imageusage&iutitle=File:"+encodeURIComponent(LIR.queueDataList[index].oldImage.replace(/ /g, "_")).replace(/"/g, "%22").replace(/'/g, "%27")+"&iulimit=500&format=json", function(result){
 				imageUsage = result.query.imageusage;
-				if (console) console.log("Image usage successfully retrieved");
-				currentPage = 0;
+				
+				$.getJSON("/api.php?action=query&blnamespace=0&bllimit=500&list=backlinks&bltitle=File:" + encodeURIComponent(oldImageName.replace(/ /g, "_")).replace(/"/g, "%22").replace(/'/g, "%27") + "&format=json", function(result){
+					imageLinks = result.query.backlinks
+					
+					if (console) console.log("Image usage successfully retrieved");
+					currentPage = 0;
 
-				/* Adds pages image is used on to window.LIR.pageKey to help keep track of pages in window.LIR.pageData later on */
-				for (currentPage = 0; currentPage < imageUsage.length; currentPage++){
-					var title = imageUsage[currentPage].title;
+					/* Adds pages image is used on to window.LIR.pageKey to help keep track of pages in window.LIR.pageData later on */
+					for (currentPage = 0; currentPage < imageUsage.length; currentPage++){
+						var title = imageUsage[currentPage].title;
 
-					if (LIR.pageKey.indexOf(title) == -1){
-						LIR.pageKey[LIR.pageKey.length] = title;
+						if (LIR.pageKey.indexOf(title) == -1){
+							LIR.pageKey[LIR.pageKey.length] = title;
+						}
+						
+						LIR.queueData[LIR.queueData.length] = {
+							oldImage: LIR.queueDataList[index].oldImage,
+							newImage: LIR.queueDataList[index].newImage,
+							title: title
+						}
 					}
 					
-					LIR.queueData[LIR.queueData.length] = {
-						oldImage: LIR.queueDataList[index].oldImage,
-						newImage: LIR.queueDataList[index].newImage,
-						title: title
+					currentPage = 0;
+
+					for (currentPage = 0; currentPage < imageLinks.length; currentPage++){
+						var title = imageLinks[currentPage].title;
+
+						if (LIR.pageKey.indexOf(title) == -1){
+							LIR.pageKey[LIR.pageKey.length] = title;
+						}
+						
+						LIR.queueData[LIR.queueData.length] = {
+							oldImage: LIR.queueDataList[index].oldImage,
+							newImage: LIR.queueDataList[index].newImage,
+							title: title
+						}
 					}
 				}
-				
 				if (typeof(callback) === "function"){
 				callback();
 				}
