@@ -272,7 +272,7 @@ if (typeof LIR === "undefined"){
 								}
 								LIR.updateStatus(false, "");
 							}
-						}
+						});
 					});
 				}else{
 					alert("This desired file name already exists. If you wish to use that file name, please delete or rename the existing image.");
@@ -302,7 +302,7 @@ if (typeof LIR === "undefined"){
 			$.getJSON("/api.php?action=query&list=imageusage&iutitle=File:"+encodeURIComponent(LIR.queueDataList[index].oldImage.replace(/ /g, "_")).replace(/"/g, "%22").replace(/'/g, "%27")+"&iulimit=500&format=json", function(result){
 				imageUsage = result.query.imageusage;
 				
-				$.getJSON("/api.php?action=query&blnamespace=0&bllimit=500&list=backlinks&bltitle=File:" + encodeURIComponent(oldImageName.replace(/ /g, "_")).replace(/"/g, "%22").replace(/'/g, "%27") + "&format=json", function(result){
+				$.getJSON("/api.php?action=query&blnamespace=0&bllimit=500&list=backlinks&bltitle=File:" + encodeURIComponent(LIR.queueDataList[index].oldImage.replace(/ /g, "_")).replace(/"/g, "%22").replace(/'/g, "%27") + "&format=json", function(result){
 					imageLinks = result.query.backlinks
 					
 					if (console) console.log("Image usage successfully retrieved");
@@ -338,10 +338,11 @@ if (typeof LIR === "undefined"){
 							title: title
 						}
 					}
-				}
-				if (typeof(callback) === "function"){
-				callback();
-				}
+					
+					if (typeof(callback) === "function"){
+						callback();
+					}
+				});
 			});
 		},
 
