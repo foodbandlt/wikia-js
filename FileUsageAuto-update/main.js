@@ -304,29 +304,14 @@ if (typeof LIR === "undefined"){
 				
 				$.getJSON("/api.php?action=query&blnamespace=0&bllimit=500&list=backlinks&bltitle=File:" + encodeURIComponent(LIR.queueDataList[index].oldImage.replace(/ /g, "_")).replace(/"/g, "%22").replace(/'/g, "%27") + "&format=json", function(result){
 					imageLinks = result.query.backlinks
+					totalImageUsage = imageUsage.concat(imageLinks);
 					
 					if (console) console.log("Image usage successfully retrieved");
 					currentPage = 0;
 
 					/* Adds pages image is used on to window.LIR.pageKey to help keep track of pages in window.LIR.pageData later on */
-					for (currentPage = 0; currentPage < imageUsage.length; currentPage++){
-						var title = imageUsage[currentPage].title;
-
-						if (LIR.pageKey.indexOf(title) == -1){
-							LIR.pageKey[LIR.pageKey.length] = title;
-						}
-						
-						LIR.queueData[LIR.queueData.length] = {
-							oldImage: LIR.queueDataList[index].oldImage,
-							newImage: LIR.queueDataList[index].newImage,
-							title: title
-						}
-					}
-					
-					currentPage = 0;
-
-					for (currentPage = 0; currentPage < imageLinks.length; currentPage++){
-						var title = imageLinks[currentPage].title;
+					for (currentPage = 0; currentPage < totalImageUsage.length; currentPage++){
+						var title = totalImageUsage[currentPage].title;
 
 						if (LIR.pageKey.indexOf(title) == -1){
 							LIR.pageKey[LIR.pageKey.length] = title;
@@ -378,18 +363,29 @@ if (typeof LIR === "undefined"){
 					if (console) console.log("Queue retrieved successfully.");
 					LIR.usageRequested = 0;
 					LIR.usageProgress = 0;
+					LIR.moveRequested = 0;
+					LIR.moveProgress = 0;
 					LIR.queueData = [];
 					LIR.pageKey = [];
 					
 					for (index in LIR.queueDataList){
+						LIR.moveRequested++;
 						LIR.moveFile(index, function(index){
+							LIR.moveProgress++;
 							LIR.usageRequested++;
 							LIR.getUsage(index, function(){
 								LIR.usageProgress++;
-								if (LIR.usageProgress == LIR.usageRequested){
+								if (LIR.moveProgress == LIR.moveRequested && LIR.usageProgress == LIR.usageRequested){
 									LIR.processPageContent(callback);
 								}
 							});
+						},
+						function(callback){
+							LIR.moveProgress++;
+								
+							if (LIR.moveProgress == LIR.moveRequested && LIR.usageProgress == LIR.usageRequested){
+								LIR.processPageContent(callback);
+							}
 						});
 					}
 				}else{
@@ -553,7 +549,7 @@ if (typeof LIR === "undefined"){
 			});
 		},
 		
-		moveFile: function(index, callback) {
+		moveFile: function(index, callback, failure) {
 			
 			$.ajax({
 				url: "/api.php",
@@ -587,7 +583,7 @@ if (typeof LIR === "undefined"){
 						
 						if (promptResponse != null && promptResponse != ""){
 							LIR.queueDataList[index].newImage = promptResponse;
-							LIR.moveFile(index, callback);
+							LIR.moveFile(index, callback, failure);
 						}else{
 							alert(LIR.queueDataList[index].oldImage + " has been removed from the queue.");
 						
@@ -598,6 +594,8 @@ if (typeof LIR === "undefined"){
 								LIR.updateQueueListing();
 							}else{
 								delete LIR.queueDataList[index];
+								
+								failure();
 							}
 						}
 					}else{
@@ -610,6 +608,8 @@ if (typeof LIR === "undefined"){
 							LIR.updateQueueListing();
 						}else{
 							delete LIR.queueDataList[index];
+							
+							failure();
 						}
 					}
 				}
@@ -770,7 +770,7 @@ if (typeof LIR === "undefined"){
 		LIR.appendButtonText = "<a style='margin-left: 20px;' class='wikia-button' onclick='LIR.start(\"single\")'>" + LIRoptions.singleButtonText + "</a><a style='margin-left: 20px;' class='wikia-button' onclick='LIR.start(\"multi\")'>" + LIRoptions.queueButtonText + "</a>";
 	
 	
-		LIR.appendButtonText += "<span id='liveLoader' style='display:none'><img src='http://slot1.images.wikia.nocookie.net/__cb62004/common/skins/common/progress-wheel.gif' /></span><span id='queueStatus' style='font-weight: bold'></span></span><br /><br /><div style='width: 850px; white-space: normal;'>The queue system is now updated and functional! No edits or moves are made until the queue is executed now. Thanks for your patience! <br><br>The <b>\""+LIRoptions.singleButtonText+"\"</b> button updates file usages across pages for a single image, while the <b>\""+LIRoptions.queueButtonText+"\"</b> button adds the file usages of the image to a queue to be updated at one time as a group. When updating file usages using the queue, usages located on like pages are grouped together into one edit, rather than one edit per usage. The queue can be accessed and executed through any file page inside the \"Edit\" drop-down. Please note that a saved queue is local to the computer being used, and does not carry over to other computers.</div>";
+		LIR.appendButtonText += "<span id='liveLoader' style='display:none'><img src='http://slot1.images.wikia.nocookie.net/__cb62004/common/skins/common/progress-wheel.gif' /></span><span id='queueStatus' style='font-weight: bold'></span></span><br /><br /><div style='width: 850px; white-space: normal;'>The queue system is now updated and functional! No edits or moves are made until the queue is executed now. Thanks for your patience! <br><br>The <b>\""+LIRoptions.singleButtonText+"\"</b> button updates file usages across pages for a single image, while the <b>\""+LIRoptions.queueButtonText+"\"</b> button adds the file usages of the image to a queue to be updated at one time as a group. When updating file usages using the queue, usages located on like pages are grouped together into one edit, rather than one edit per usage. The queue can be accessed and executed through any file page inside the \"Edit\" drop-down. Please note that a saved queue is local to the browser being used, and does not carry over to other browsers/computers.</div>";
 		
 		if (LIRoptions.bottomMessage != ""){
 			LIR.appendButtonText += ('<br /><div style="font-weight: bold; width: 850px; white-space: normal;">' + LIRoptions.bottomMessage + '</div>');
