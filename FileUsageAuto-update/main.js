@@ -128,11 +128,7 @@ if (typeof LIR === "undefined"){
 			/* Sets variables used by the function */
 			var oldImageName = $('input[name="wpOldTitle"]').val().slice(5),
 				newImageName = document.getElementById("wpNewTitleMain").value,
-				reason = $("#wpReason").val(),
-				current = {
-					page: 0,
-					content: ""
-				}
+				reason = $("#wpReason").val();
 			LIR.pageKey = [];
 			
 			/* Checks if old or new file name is currently part of the queue */
@@ -149,8 +145,8 @@ if (typeof LIR === "undefined"){
 				}
 			}
 			
-			/* Checks if destination file name is valid (since Wikia's server-sided code usually validates this) */
-			if (newImageName.slice(-4).search(/\.png/i) == -1 && newImageName.slice(-4).search(/\.jpg/i) == -1 && newImageName.slice(-5).search(/\.jpeg/i) == -1 && newImageName.slice(-4).search(/\.gif/i) == -1 && newImageName.slice(-4).search(/\.svg/i) == -1){
+			/* Checks if destination file name is the same as file being renamed (since Wikia's server-sided code usually validates this) */
+			if (oldImageName.lastIndexOf(".") == oldImageName.length-4 && oldImageName.slice(oldImageName.length-4) != newImageName.slice(newImageName.length-4)){
 				alert("File name does not contain a valid file extension.  Please add a valid file extension.");
 				LIR.started = false;
 				if (typeof LIR.queuePosition !== "undefined"){
@@ -166,10 +162,11 @@ if (typeof LIR === "undefined"){
 				if (typeof result.query.pages[-1] !== "undefined"){
 					/* If not, then get file usage for image */
 					$.getJSON("/api.php?action=query&list=imageusage&iutitle=File:"+encodeURIComponent(oldImageName.replace(/ /g, "_")).replace(/"/g, "%22").replace(/'/g, "%27")+"&iulimit=500&format=json", function(result){
-						imageUsage = result.query.imageusage;
+						var imageUsage = result.query.imageusage;
 						
 						$.getJSON("/api.php?action=query&blnamespace=0&bllimit=500&list=backlinks&bltitle=File:" + encodeURIComponent(oldImageName.replace(/ /g, "_")).replace(/"/g, "%22").replace(/'/g, "%27") + "&format=json", function(result){
-							imageLinks = result.query.backlinks;
+							var imageLinks = result.query.backlinks;
+							var totalImageUsage = imageUsage.concat(imageLinks);
 							
 							if (console) console.log("Image usage successfully retrieved");
 							if (imageUsage.length > 0 || imagesLinks.length > 0){
@@ -180,8 +177,8 @@ if (typeof LIR === "undefined"){
 									LIR.pageKey = [];
 													
 									/* Adds pages image is used on to window.LIR.pageKey to help keep track of pages in window.LIR.pageData later on */
-									for (current.page = 0; current.page < imageUsage.length; current.page++){
-										var title = imageUsage[current.page].title;
+									for (var currentPage = 0; currentPage < totalImageUsage.length; currentPage++){
+										var title = totalImageUsage[currentPage].title;
 
 										if (LIR.pageKey.indexOf(title) == -1){
 											LIR.pageKey[LIR.pageKey.length] = title;
@@ -189,31 +186,18 @@ if (typeof LIR === "undefined"){
 										
 										/* Temporary until Wikia fixes issue with editing blog comments through the API */
 										if (title.search(/User blog comment/i) == -1){
-											LIR.queueData[LIR.queueData.length] = {
-												oldImage: oldImageName,
-												newImage: newImageName,
-												title: title,
-												reason: reason
-											}
-										}else{
-											LIRBlogComment = true;
-										}
-									}
-									
-									for (current.page = 0; current.page < imageLinks.length; current.page++){
-										var title = imageLinks[current.page].title;
-
-										if (LIR.pageKey.indexOf(title) == -1){
-											LIR.pageKey[LIR.pageKey.length] = title;
-										}
-										
-										/* Temporary until Wikia fixes issue with editing blog comments through the API */
-										if (title.search(/User blog comment/i) == -1){
-											LIR.queueData[LIR.queueData.length] = {
-												oldImage: oldImageName,
-												newImage: newImageName,
-												title: title,
-												reason: reason
+											for (i = 0; i <= LIR.queueData.length; i++){
+												if (i == LIR.queueData.length){
+													LIR.queueData[LIR.queueData.length] = {
+														oldImage: oldImageName,
+														newImage: newImageName,
+														title: title,
+														reason: reason
+													}
+													break;
+												}else if (LIR.queueData[i].title == title && LIR.queueData[i].oldImage == oldImageName && LIR.queueData[i].newImage == newImageName){
+													break;
+												}
 											}
 										}else{
 											LIRBlogComment = true;
@@ -226,8 +210,8 @@ if (typeof LIR === "undefined"){
 										reason: reason
 									}
 										
-									for (current.page = 0; current.page < imageUsage.length; current.page++){
-										var title = imageUsage[current.page].title;
+									for (var currentPage = 0; currentPage < imageUsage.length; currentPage++){
+										var title = imageUsage[currentPage].title;
 										/* Temporary until Wikia fixes issue with editing blog comments through the API */
 										if (title.search(/User blog comment/i) != -1){
 											LIRBlogComment = true;
@@ -300,27 +284,33 @@ if (typeof LIR === "undefined"){
 		
 		getUsage: function(index, callback){
 			$.getJSON("/api.php?action=query&list=imageusage&iutitle=File:"+encodeURIComponent(LIR.queueDataList[index].oldImage.replace(/ /g, "_")).replace(/"/g, "%22").replace(/'/g, "%27")+"&iulimit=500&format=json", function(result){
-				imageUsage = result.query.imageusage;
+				var imageUsage = result.query.imageusage;
 				
 				$.getJSON("/api.php?action=query&blnamespace=0&bllimit=500&list=backlinks&bltitle=File:" + encodeURIComponent(LIR.queueDataList[index].oldImage.replace(/ /g, "_")).replace(/"/g, "%22").replace(/'/g, "%27") + "&format=json", function(result){
-					imageLinks = result.query.backlinks
-					totalImageUsage = imageUsage.concat(imageLinks);
+					var imageLinks = result.query.backlinks
+					var totalImageUsage = imageUsage.concat(imageLinks);
 					
 					if (console) console.log("Image usage successfully retrieved");
-					currentPage = 0;
 
 					/* Adds pages image is used on to window.LIR.pageKey to help keep track of pages in window.LIR.pageData later on */
-					for (currentPage = 0; currentPage < totalImageUsage.length; currentPage++){
+					for (var currentPage = 0; currentPage < totalImageUsage.length; currentPage++){
 						var title = totalImageUsage[currentPage].title;
 
 						if (LIR.pageKey.indexOf(title) == -1){
 							LIR.pageKey[LIR.pageKey.length] = title;
 						}
 						
-						LIR.queueData[LIR.queueData.length] = {
-							oldImage: LIR.queueDataList[index].oldImage,
-							newImage: LIR.queueDataList[index].newImage,
-							title: title
+						for (i = 0; i <= LIR.queueData.length; i++){
+							if (i == LIR.queueData.length){
+								LIR.queueData[LIR.queueData.length] = {
+									oldImage: LIR.queueDataList[index].oldImage,
+									newImage: LIR.queueDataList[index].newImage,
+									title: title
+								}
+								break;
+							}else if (LIR.queueData[i].title == title && LIR.queueData[i].oldImage == LIR.queueDataList[index].oldImage && LIR.queueData[i].newImage == LIR.queueDataList[index].newImage){
+								break;
+							}
 						}
 					}
 					
@@ -363,13 +353,12 @@ if (typeof LIR === "undefined"){
 					if (console) console.log("Queue retrieved successfully.");
 					LIR.usageRequested = 0;
 					LIR.usageProgress = 0;
-					LIR.moveRequested = 0;
+					LIR.moveRequested = LIR.queueDataList.length;
 					LIR.moveProgress = 0;
 					LIR.queueData = [];
 					LIR.pageKey = [];
 					
 					for (index in LIR.queueDataList){
-						LIR.moveRequested++;
 						LIR.moveFile(index, function(index){
 							LIR.moveProgress++;
 							LIR.usageRequested++;
@@ -429,7 +418,7 @@ if (typeof LIR === "undefined"){
 				function(result){
 					/* Saves page contents for each page in LIR.pageData */
 					for (i in result.query.pages){
-						keyNum = LIR.pageKey.indexOf(result.query.pages[i].title);
+						var keyNum = LIR.pageKey.indexOf(result.query.pages[i].title);
 						LIR.pageData[keyNum] = {
 							title: LIR.pageKey[keyNum],
 							content: result.query.pages[i].revisions[0]["*"],
@@ -444,17 +433,17 @@ if (typeof LIR === "undefined"){
 					
 					/* Replacing image name on each page */
 					for (i=0; i<LIR.queueData.length; i++){
-						pageKey = LIR.pageKey.indexOf(LIR.queueData[i].title);
-						escapedName0 = window.LIR.queueData[i].oldImage.replace(/\*/g, "\\*").replace(/\?/g, "\\?").replace(/\./g, "\\.").replace(/ /g, "[ _]*?").replace(/\(/g, "\\(").replace(/\)/g, "\\)");
+						var pageKey = LIR.pageKey.indexOf(LIR.queueData[i].title);
+						var escapedName0 = window.LIR.queueData[i].oldImage.replace(/\*/g, "\\*").replace(/\?/g, "\\?").replace(/\./g, "\\.").replace(/ /g, "[ _]*?").replace(/\(/g, "\\(").replace(/\)/g, "\\)");
 						
 						if ( escapedName0.substr(0,1).match(/[A-z]/i) ){
-							escapedName = "[" + escapedName0.substr(0,1).toUpperCase() + escapedName0.substr(0,1).toLowerCase() + "]" + escapedName0.substr(1);
+							var escapedName = "[" + escapedName0.substr(0,1).toUpperCase() + escapedName0.substr(0,1).toLowerCase() + "]" + escapedName0.substr(1);
 						}else{
 							escapedName = escapedName0;
 						}
 						
-						pageReplacement = new RegExp("(\\n[ ]*?|:?File:[ ]*?|=[ ]*?|\\|)" + escapedName + "([ ]*?\\n|[ ]*?\\||\\]|\\})", "g");
-						replacementReg = new RegExp(escapedName, "g");
+						var pageReplacement = new RegExp("(\\n[ ]*?|:?File:[ ]*?|=[ ]*?|\\|)" + escapedName + "([ ]*?\\n|[ ]*?\\||\\]|\\})", "g");
+						var replacementReg = new RegExp(escapedName, "g");
 						
 						if (LIR.pageData[pageKey].content.search(pageReplacement) != -1){
 							LIR.pageData[pageKey].changed = true;
@@ -579,7 +568,7 @@ if (typeof LIR === "undefined"){
 							callback(index);
 						}
 					}else if (result.error.code == "articleexists" || result.error.code == "invalidtitle"){
-						promptResponse = prompt("The file \"" + LIR.queueDataList[index].oldImage + "\" was unable to be moved to \"" + LIR.queueDataList[index].newImage + "\" for reason: " + result.error.code + ". \n Please enter another destination name for this file.");
+						var promptResponse = prompt("The file \"" + LIR.queueDataList[index].oldImage + "\" was unable to be moved to \"" + LIR.queueDataList[index].newImage + "\" for reason: " + result.error.code + ". \n Please enter another destination name for this file.");
 						
 						if (promptResponse != null && promptResponse != ""){
 							LIR.queueDataList[index].newImage = promptResponse;
@@ -673,8 +662,8 @@ if (typeof LIR === "undefined"){
 				return false;
 			}
 			
-			LIRCurrentQueueData = LIR.queueData;
-			queueToAdd = "";
+			var LIRCurrentQueueData = LIR.queueData;
+			var queueToAdd = "";
 			
 			for (i = 0; i<LIRCurrentQueueData.length; i++){
 				queueToAdd += "<div><a target='_blank' href='/wiki/File:" + encodeURIComponent(LIRCurrentQueueData[i].oldImage.replace(/ /g, "_")).replace(/"/g, "%22").replace(/'/g, "%27") + "'>" + LIRCurrentQueueData[i].oldImage + "</a> --&gt; <a target='_blank' href='/wiki/File:" + encodeURIComponent(LIRCurrentQueueData[i].newImage.replace(/ /g, "_")).replace(/"/g, "%22").replace(/'/g, "%27") + "'>" + LIRCurrentQueueData[i].newImage + "</a></div>";
@@ -781,12 +770,15 @@ if (typeof LIR === "undefined"){
 		
 	if (wgCanonicalNamespace == "File" && Storage){
 		$("#WikiaPageHeader nav ul").append("<li><a onclick='LIR.showQueueModal()'>Queue</a></li>");
-		LIR.queueData = JSON.parse(localStorage[wgUserName + "_LIRQueueData"]);
+		if (typeof localStorage[wgUserName + "_LIRQueueData"] !== "undefined"){
+			LIR.queueData = JSON.parse(localStorage[wgUserName + "_LIRQueueData"]);
 		
-		for (var i in LIR.queueData){
-			if (LIR.queueData[i].oldImage == wgTitle){
-				$("#WikiaPageHeader").after('<div style="position: relative; width: 80%; margin: 0px auto 10px auto; border: 2px solid lightgreen; background-color: white;" id="LIRNotification"><img src="http://upload.wikimedia.org/wikipedia/commons/b/bd/Checkmark_green.svg" style="height: 40px; float:left; margin: 5px 20px;" /><span style="float: left; word-wrap:break-word; margin-top: 10px; font-size: 14px; padding-bottom: 10px;">This image is currently in your queue to be renamed!<br>New name: <span style="font-weight: bold;">'+LIR.queueData[i].newImage+'</span></span><div style="position: absolute; bottom: 2px; right: 2px;"><a onclick="LIR.removeFromQueue(\'' + LIR.queueData[i].oldImage.replace(/'/g, "\\'") + '\')" style="cursor: pointer">Remove</a></div><div style="clear:both;"></div></div>');
-				break;
+		
+			for (var i in LIR.queueData){
+				if (LIR.queueData[i].oldImage == wgTitle){
+					$("#WikiaPageHeader").after('<div style="position: relative; width: 80%; margin: 0px auto 10px auto; border: 2px solid lightgreen; background-color: white;" id="LIRNotification"><img src="http://upload.wikimedia.org/wikipedia/commons/b/bd/Checkmark_green.svg" style="height: 40px; float:left; margin: 5px 20px;" /><span style="float: left; word-wrap:break-word; margin-top: 10px; font-size: 14px; padding-bottom: 10px;">This image is currently in your queue to be renamed!<br>New name: <span style="font-weight: bold;">'+LIR.queueData[i].newImage+'</span></span><div style="position: absolute; bottom: 2px; right: 2px;"><a onclick="LIR.removeFromQueue(\'' + LIR.queueData[i].oldImage.replace(/'/g, "\\'") + '\')" style="cursor: pointer">Remove</a></div><div style="clear:both;"></div></div>');
+					break;
+				}
 			}
 		}
 	}
