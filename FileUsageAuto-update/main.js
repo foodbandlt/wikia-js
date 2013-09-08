@@ -11,52 +11,58 @@
 
 // Options processing
 
-if (typeof LIR === "undefined"){
+if (typeof LIRoptions !== "undefined"){
+	if (typeof (LIRoptions.bottomMessage) === "undefined"){
+		LIRoptions.bottomMessage = "";
+	}
+	
+	if (typeof LIRoptions.editSummary === "undefined"){
+		LIRoptions.editSummary = "Updating file links (automatic)";
+	}
 
-	if (typeof LIRoptions !== "undefined"){
-		if (typeof (LIRoptions.bottomMessage) === "undefined"){
-			LIRoptions.bottomMessage = "";
-		}
-		
-		if (typeof LIRoptions.editSummary === "undefined"){
-			LIRoptions.editSummary = "Updating file links (automatic)";
-		}
-		
-		if (typeof LIRoptions.singleButtonText !== "undefined"){
-			if (LIRoptions.singleButtonText == ""){
-				LIRoptions.singleButtonText = "Rename and replace";
-			}
-		}else{
+	if (typeof LIRoptions.singleButtonText !== "undefined"){
+		if (LIRoptions.singleButtonText == ""){
 			LIRoptions.singleButtonText = "Rename and replace";
 		}
-		
-		if (typeof LIRoptions.queueButtonText !== "undefined"){
-			if (LIRoptions.queueButtonText == ""){
-				LIRoptions.queueButtonText = "Add to queue";
-			}else if (LIRoptions.queueButtonText == "Rename and add to queue"){
-				LIRoptions.queueButtonText = "Add to queue";
-			}
-		}else{
+	}else{
+		LIRoptions.singleButtonText = "Rename and replace";
+	}
+	
+	if (typeof LIRoptions.queueButtonText !== "undefined"){
+		if (LIRoptions.queueButtonText == ""){
+			LIRoptions.queueButtonText = "Add to queue";
+		}else if (LIRoptions.queueButtonText == "Rename and add to queue"){
 			LIRoptions.queueButtonText = "Add to queue";
 		}
-	}else{		
-		LIRoptions = {
-			bottomMessage: "",
-			editSummary: 'Updating file links (automatic)',
-			singleButtonText: 'Rename and replace',
-			queueButtonText: 'Add to queue'
-		}
+	}else{
+		LIRoptions.queueButtonText = "Add to queue";
 	}
+}else{		
+	LIRoptions = {
+		bottomMessage: "",
+		editSummary: 'Updating file links (automatic)',
+		singleButtonText: 'Rename and replace',
+		queueButtonText: 'Add to queue'
+	}
+}
+	
+if (typeof LIR === "undefined"){
 
 	if (typeof localStorage.LIRQueuedUpdates === "undefined"){
 		localStorage.LIRQueuedUpdates = 0;
 		localStorage.LIRQueuedUpdatesPos = 1;
+	}
+	
+	if (typeof localStorage[wgUserName + "_LIRNamespaceSelection"] === "undefined"){
+		localStorage[wgUserName + "_LIRNamespaceSelection"] = "";
 	}
 
 	LIR = {
 		started: false,
 		
 		updateStatus: function(gifDisplay, message){
+			if ($("#queueStatus").length == 0) return false;
+		
 			if (typeof gifDisplay === "string"){
 				message = gifDisplay;
 			}else if (typeof gifDisplay === "boolean"){
@@ -101,7 +107,7 @@ if (typeof LIR === "undefined"){
 					}
 					
 					if (LIR.queuePosition != localStorage.LIRQueuedUpdatesPos){
-						LIR.updateStatus("Number " + (LIR.queuePosition - localStorage.LIRQueuedUpdatesPos) + " in line to add to queue");
+						LIR.updateStatus("Number " + (LIR.queuePosition - localStorage.LIRQueuedUpdatesPos) + " on wait list to add to queue");
 						setTimeout(function(){LIR.start(type);}, 500);
 						return false;
 					}
@@ -109,7 +115,7 @@ if (typeof LIR === "undefined"){
 					LIR.updateStatus("Processing");
 					LIR.type = "multi";
 				}else{
-					alert("Incorrect type specified");
+					if (console) console.log("Incorrect type specified");
 					return false;
 				}
 			}else{
@@ -134,27 +140,31 @@ if (typeof LIR === "undefined"){
 			/* Checks if old or new file name is currently part of the queue */
 			for (i=0; i<LIR.queueData.length; i++){
 				if (LIR.queueData[i].newImage == oldImageName || LIR.queueData[i].newImage == newImageName || LIR.queueData[i].oldImage == oldImageName){
-					alert("Image is already added to the queue, or the destination image name is already queued to be used by another file.");
 					LIR.started = false;
 					if (typeof LIR.queuePosition !== "undefined"){
 						localStorage.LIRQueuedUpdatesPos++;
 						delete LIR.queuePosition;
 					}
-					LIR.updateStatus(false, "");
+					LIR.updateStatus(false, "File already added to queue, or destination name is already queued to be used.");
 					return false;
 				}
 			}
 			
 			/* Checks if destination file name is the same as file being renamed (since Wikia's server-sided code usually validates this) */
 			if (oldImageName.lastIndexOf(".") == oldImageName.length-4 && oldImageName.slice(oldImageName.length-4) != newImageName.slice(newImageName.length-4)){
-				alert("File name does not contain a valid file extension.  Please add a valid file extension.");
 				LIR.started = false;
 				if (typeof LIR.queuePosition !== "undefined"){
 					localStorage.LIRQueuedUpdatesPos++;
 					delete LIR.queuePosition;
 				}
-				LIR.updateStatus(false, "");
+				LIR.updateStatus(false, "Invalid file extension");
 				return false;
+			}
+			
+			if (localStorage[wgUserName + "_LIRNamespaceSelection"] == false){
+				var namespaceSelection = "&blnamespace=0";
+			}else{
+				var namespaceSelection = "";
 			}
 			
 			/* Check if destination file name is in use */
@@ -164,7 +174,7 @@ if (typeof LIR === "undefined"){
 					$.getJSON("/api.php?action=query&list=imageusage&iutitle=File:"+encodeURIComponent(oldImageName.replace(/ /g, "_")).replace(/"/g, "%22").replace(/'/g, "%27")+"&iulimit=500&format=json", function(result){
 						var imageUsage = result.query.imageusage;
 						
-						$.getJSON("/api.php?action=query&blnamespace=0&bllimit=500&list=backlinks&bltitle=File:" + encodeURIComponent(oldImageName.replace(/ /g, "_")).replace(/"/g, "%22").replace(/'/g, "%27") + "&format=json", function(result){
+						$.getJSON("/api.php?action=query" + namespaceSelection + "&bllimit=500&list=backlinks&bltitle=File:" + encodeURIComponent(oldImageName.replace(/ /g, "_")).replace(/"/g, "%22").replace(/'/g, "%27") + "&format=json", function(result){
 							var imageLinks = result.query.backlinks;
 							var totalImageUsage = imageUsage.concat(imageLinks);
 							
@@ -241,31 +251,28 @@ if (typeof LIR === "undefined"){
 										localStorage.LIRQueuedUpdatesPos++;
 										delete LIR.queuePosition;
 									}
-									LIR.updateStatus(false, "");
-									alert("One of pages this image is used on is a blog comment. There is currently a bug with Wikia's API concerning editing blog comments.  Please update the file links manually.");
+									LIR.updateStatus(false, "File used in blog comment. Unable to update blog comments.");
 								}
 								
 
 							}else{
 								/* Else, prompt to use normal renaming, since this is kind of pointless otherwise */
-								alert("Image is not being used on any pages.  Please use the regular rename button.");
 								LIR.started = false;
 								if (typeof LIR.queuePosition !== "undefined"){
 									localStorage.LIRQueuedUpdatesPos++;
 									delete LIR.queuePosition;
 								}
-								LIR.updateStatus(false, "");
+								LIR.updateStatus(false, "File not being used on any pages.");
 							}
 						});
 					});
 				}else{
-					alert("This desired file name already exists. If you wish to use that file name, please delete or rename the existing image.");
 					LIR.started = false;
 					if (typeof LIR.queuePosition !== "undefined"){
 						localStorage.LIRQueuedUpdatesPos++;
 						delete LIR.queuePosition;
 					}
-					LIR.updateStatus(false, "");
+					LIR.updateStatus(false, "File name already exists");
 				}
 			});
 			
@@ -283,10 +290,16 @@ if (typeof LIR === "undefined"){
 		},
 		
 		getUsage: function(index, callback){
+			if (localStorage[wgUserName + "_LIRNamespaceSelection"] == false){
+				var namespaceSelection = "&blnamespace=0";
+			}else{
+				var namespaceSelection = "";
+			}
+		
 			$.getJSON("/api.php?action=query&list=imageusage&iutitle=File:"+encodeURIComponent(LIR.queueDataList[index].oldImage.replace(/ /g, "_")).replace(/"/g, "%22").replace(/'/g, "%27")+"&iulimit=500&format=json", function(result){
 				var imageUsage = result.query.imageusage;
 				
-				$.getJSON("/api.php?action=query&blnamespace=0&bllimit=500&list=backlinks&bltitle=File:" + encodeURIComponent(LIR.queueDataList[index].oldImage.replace(/ /g, "_")).replace(/"/g, "%22").replace(/'/g, "%27") + "&format=json", function(result){
+				$.getJSON("/api.php?action=query" + namespaceSelection + "&bllimit=500&list=backlinks&bltitle=File:" + encodeURIComponent(LIR.queueDataList[index].oldImage.replace(/ /g, "_")).replace(/"/g, "%22").replace(/'/g, "%27") + "&format=json", function(result){
 					var imageLinks = result.query.backlinks
 					var totalImageUsage = imageUsage.concat(imageLinks);
 					
@@ -379,7 +392,6 @@ if (typeof LIR === "undefined"){
 					}
 				}else{
 					if (console) console.log("Queue does not exist or was unable to be retrieved.");
-					alert("Queue does not exist or was unable to be retrieved.");
 					LIR.started = false;
 					return false;
 				}
@@ -629,9 +641,10 @@ if (typeof LIR === "undefined"){
 		**************************************/
 		
 		log: function(message){
-			if (typeof(LIR.logMessages) === "undefined"){
-				LIR.logMessages = "<div style='font-weight: bold'>Queue system started.</div>";
+			if (typeof LIR.logMessages === "undefined"){
+				LIR.logMessages = "";
 			}
+
 			LIR.logMessages = LIR.logMessages + "<div style='font-weight: bold'>" + message + "</div>";
 			
 			if ($("#LIRLog").length > 0){
@@ -658,6 +671,7 @@ if (typeof LIR === "undefined"){
 				LIR.queueData = JSON.parse(localStorage[wgUserName + "_LIRQueueData"]);
 			}else{
 				document.getElementById("LIRQueue").innerHTML = "<div>There is currently nothing in the queue.</div>";
+				document.getElementById("LIRQueueLengthBox").innerHTML = "0";
 				LIR.log("Queue updated.");
 				return false;
 			}
@@ -670,14 +684,23 @@ if (typeof LIR === "undefined"){
 			}
 			
 			document.getElementById("LIRQueue").innerHTML = queueToAdd;
+			document.getElementById("LIRQueueLengthBox").innerHTML = LIR.queueData.length;
 			$("#LIRQueue div:odd").css("background-color", "lightgrey");
 			LIR.log("Queue updated.");
+		},
+		
+		updateNamespaceSelection: function(){
+			if (document.getElementById("LIRNamespaceToggleCheck").checked == true){
+				localStorage[wgUserName + "_LIRNamespaceSelection"] = "checked";
+			}else{
+				localStorage[wgUserName + "_LIRNamespaceSelection"] = "";
+			}
 		},
 
 		showQueueModal: function(){
 			$.showCustomModal( 
 				"Image link updating queue", 
-				'<div id="LIRContainer" style="width: 100%;"> <div id="LIRQueue" style="overflow: scroll; width: 580px; height: 300px; float: left; border: 1px solid black; font-weight: bold; background-color: #FFFFFF;"></div> <div id="LIRLog" style="overflow-x: scroll; height: 300px; width: 200px; float: right; background-color: lightgrey; border: 1px solid black;"></div> <div style="clear: both"></div> <div id="LIRFailedLog" style="width: 790px; margin: 5px auto 0px auto; background-color: red; height: 150px; border: 1px solid black; font-weight: bold; overflow: scroll;">Failed items appear here after execution.</div> </div>', 
+				'<div id="LIRContainer" style="width: 100%;"> <div id="LIRQueue" style="overflow: scroll; width: 590px; height: 300px; float: left; border: 1px solid black; font-weight: bold; background-color: #FFFFFF;"></div> <div id="LIRLog" style="overflow-x: scroll; height: 300px; width: 200px; float: right; background-color: lightgrey; border: 1px solid black;"></div> <div id="LIRQueueLength" style="float: left;margin: 5px 15px 0px 0px; font-weight: bold;">Files in queue: <span id="LIRQueueLengthBox"></span></div> <div id="LIRNamespaceToggle" style="float: left; margin: 5px 5px 0px 0px;"><input type="checkbox" id="LIRNamespaceToggleCheck" onchange="LIR.updateNamespaceSelection()" ' + localStorage[wgUserName + "_LIRNamespaceSelection"] + '>Include <span style="font-weight: bold">links</span> in all namespaces eg: [[:File:File.png]] <span style="font-size: 9px;">(only includes Main by default)</span></div> <div style="clear: both"></div> <div id="LIRFailedLog" style="width: 798px; margin: 5px auto 0px auto; background-color: #ffbfbf; height: 150px; border: 1px solid black; font-weight: bold; overflow: scroll;">Failed items appear here after execution.</div> </div>', 
 				{
 					id: "optionsWindow",
 					width: 800,
@@ -691,12 +714,12 @@ if (typeof LIR === "undefined"){
 						},
 						{
 							id: "resetCounter",
-							message: "Reset waiting pages",
+							message: "Reset wait list",
 							handler: function () {
 								if (confirm("This will reset the list of pages waiting to be added to the queue in-case there was a problem processing a page that's preventing you from executing the queue.  \n\nNote that there are still " + (localStorage.LIRQueuedUpdates - localStorage.LIRQueuedUpdatesPos - 1) + " page(s) waiting to be added to the queue.  If you are absolutely positive that you currently have no pages open that are waiting in line to be processed or a problem has occured that has halted page processing, then press OK to clear the list of waiting pages. \n\nIf you do have any pages waiting to be processed, you will have to reload and resubmit those pages to the queue to add them.")){
 									localStorage.LIRQueuedUpdates = 0;
 									localStorage.LIRQueuedUpdatesPos = 1;
-									alert("List of waiting pages cleared");
+									LIR.log("List of waiting pages cleared");
 								}
 							}
 						},
@@ -722,32 +745,19 @@ if (typeof LIR === "undefined"){
 									LIR.log("No queue exists to be executed");
 								}
 							}
-						}/*,
-						{
-							id: "saveQueue",
-							defaultButton: true,
-							message: "Save",
-							handler: function () {
-								if (confirm("Save the queue?  These changes can't be undone.")){
-								
-								}
-							}
 						}
-						*/
 					],
 					callback: function(){
 						$(".blackout, .close").off("click").click(function(){
 							if ((LIR.started == false || typeof(LIR.started) === "undefined")){
 								delete LIRCurrentQueueData;
-								delete LIRCurrentPageKey;
 								$("#optionsWindow").remove();
 								$(".blackout").fadeOut(function(){
 									$(this).remove();
 								});
 							}
 						});
-			
-						LIR.log("Queue system opened.");
+
 						LIR.updateQueueListing();
 					}
 				}
@@ -766,9 +776,8 @@ if (typeof LIR === "undefined"){
 		}
 		
 		$('td.mw-submit').append(LIR.appendButtonText);
-	}
-		
-	if (wgCanonicalNamespace == "File" && Storage){
+		$('#mw-movepage-table tr:eq(4)').after('<tr><td></td><td class="mw-input"><label><input type="checkbox" id="LIRNamespaceToggleCheck" onchange="LIR.updateNamespaceSelection()" ' + localStorage[wgUserName + "_LIRNamespaceSelection"] + '>&nbsp;Include <span style="font-weight: bold">links</span> in all namespaces eg: [[:File:File.png]] <span style="font-size: 9px;">(only includes Main by default) only affects ' + LIRoptions.singleButtonText + ' option</span></label></td></tr>');
+	}else if (wgCanonicalNamespace == "File" && Storage){
 		$("#WikiaPageHeader nav ul").append("<li><a onclick='LIR.showQueueModal()'>Queue</a></li>");
 		if (typeof localStorage[wgUserName + "_LIRQueueData"] !== "undefined"){
 			LIR.queueData = JSON.parse(localStorage[wgUserName + "_LIRQueueData"]);
@@ -776,7 +785,7 @@ if (typeof LIR === "undefined"){
 		
 			for (var i in LIR.queueData){
 				if (LIR.queueData[i].oldImage == wgTitle){
-					$("#WikiaPageHeader").after('<div style="position: relative; width: 80%; margin: 0px auto 10px auto; border: 2px solid lightgreen; background-color: white;" id="LIRNotification"><img src="http://upload.wikimedia.org/wikipedia/commons/b/bd/Checkmark_green.svg" style="height: 40px; float:left; margin: 5px 20px;" /><span style="float: left; word-wrap:break-word; margin-top: 10px; font-size: 14px; padding-bottom: 10px;">This image is currently in your queue to be renamed!<br>New name: <span style="font-weight: bold;">'+LIR.queueData[i].newImage+'</span></span><div style="position: absolute; bottom: 2px; right: 2px;"><a onclick="LIR.removeFromQueue(\'' + LIR.queueData[i].oldImage.replace(/'/g, "\\'") + '\')" style="cursor: pointer">Remove</a></div><div style="clear:both;"></div></div>');
+					$("#WikiaPageHeader").after('<div style="position: relative; width: 80%; margin: 0px auto 10px auto; padding-bottom: 10px; border: 2px solid lightgreen; background-color: white;" id="LIRNotification"><img src="http://upload.wikimedia.org/wikipedia/commons/b/bd/Checkmark_green.svg" style="height: 40px; float:left; margin: 5px 20px;" /><span style="float: left; word-wrap:break-word; margin-top: 10px; font-size: 14px; padding-bottom: 10px;">This image is currently in your queue to be renamed!<br>New name: <span style="font-weight: bold;">'+LIR.queueData[i].newImage+'</span></span><div style="position: absolute; bottom: 2px; right: 2px;"><a onclick="LIR.removeFromQueue(\'' + LIR.queueData[i].oldImage.replace(/'/g, "\\'") + '\')" style="cursor: pointer">Remove from queue</a></div><div style="clear:both;"></div></div>');
 					break;
 				}
 			}
