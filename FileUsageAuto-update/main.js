@@ -3,7 +3,7 @@
 /**
 *
 * Description:
-* 		Updates file links in use on the wiki when image is renamed.
+* Updates file links in use on the wiki when image is renamed.
 *
 * @Author Foodbandlt
 *
@@ -21,7 +21,7 @@ if (typeof LIRoptions !== "undefined"){
 	}
 
 	if (typeof LIRoptions.singleButtonText !== "undefined"){
-		if (LIRoptions.singleButtonText == ""){
+		if (LIRoptions.singleButtonText === ""){
 			LIRoptions.singleButtonText = "Rename and replace";
 		}
 	}else{
@@ -29,9 +29,9 @@ if (typeof LIRoptions !== "undefined"){
 	}
 	
 	if (typeof LIRoptions.queueButtonText !== "undefined"){
-		if (LIRoptions.queueButtonText == ""){
+		if (LIRoptions.queueButtonText === ""){
 			LIRoptions.queueButtonText = "Add to queue";
-		}else if (LIRoptions.queueButtonText == "Rename and add to queue"){
+		}else if (LIRoptions.queueButtonText === "Rename and add to queue"){
 			LIRoptions.queueButtonText = "Add to queue";
 		}
 	}else{
@@ -43,7 +43,7 @@ if (typeof LIRoptions !== "undefined"){
 		editSummary: 'Updating file links (automatic)',
 		singleButtonText: 'Rename and replace',
 		queueButtonText: 'Add to queue'
-	}
+	};
 }
 	
 if (typeof LIR === "undefined"){
@@ -203,7 +203,7 @@ if (typeof LIR === "undefined"){
 														newImage: newImageName,
 														title: title,
 														reason: reason
-													}
+													};
 													break;
 												}else if (LIR.queueData[i].title == title && LIR.queueData[i].oldImage == oldImageName && LIR.queueData[i].newImage == newImageName){
 													break;
@@ -218,7 +218,7 @@ if (typeof LIR === "undefined"){
 										oldImage: oldImageName,
 										newImage: newImageName,
 										reason: reason
-									}
+									};
 										
 									for (var currentPage = 0; currentPage < imageUsage.length; currentPage++){
 										var title = imageUsage[currentPage].title;
@@ -262,7 +262,7 @@ if (typeof LIR === "undefined"){
 									localStorage.LIRQueuedUpdatesPos++;
 									delete LIR.queuePosition;
 								}
-								LIR.updateStatus(false, "File not being used on any pages.");
+								LIR.updateStatus(false, "File not being used on any pages");
 							}
 						});
 					});
@@ -300,7 +300,7 @@ if (typeof LIR === "undefined"){
 				var imageUsage = result.query.imageusage;
 				
 				$.getJSON("/api.php?action=query" + namespaceSelection + "&bllimit=500&list=backlinks&bltitle=File:" + encodeURIComponent(LIR.queueDataList[index].oldImage.replace(/ /g, "_")).replace(/"/g, "%22").replace(/'/g, "%27") + "&format=json", function(result){
-					var imageLinks = result.query.backlinks
+					var imageLinks = result.query.backlinks;
 					var totalImageUsage = imageUsage.concat(imageLinks);
 					
 					if (console) console.log("Image usage successfully retrieved");
@@ -319,7 +319,7 @@ if (typeof LIR === "undefined"){
 									oldImage: LIR.queueDataList[index].oldImage,
 									newImage: LIR.queueDataList[index].newImage,
 									title: title
-								}
+								};
 								break;
 							}else if (LIR.queueData[i].title == title && LIR.queueData[i].oldImage == LIR.queueDataList[index].oldImage && LIR.queueData[i].newImage == LIR.queueDataList[index].newImage){
 								break;
@@ -371,7 +371,7 @@ if (typeof LIR === "undefined"){
 					LIR.queueData = [];
 					LIR.pageKey = [];
 					
-					for (index in LIR.queueDataList){
+					for (var index in LIR.queueDataList){
 						LIR.moveFile(index, function(index){
 							LIR.moveProgress++;
 							LIR.usageRequested++;
@@ -429,7 +429,7 @@ if (typeof LIR === "undefined"){
 				},
 				function(result){
 					/* Saves page contents for each page in LIR.pageData */
-					for (i in result.query.pages){
+					for (var i in result.query.pages){
 						var keyNum = LIR.pageKey.indexOf(result.query.pages[i].title);
 						LIR.pageData[keyNum] = {
 							title: LIR.pageKey[keyNum],
@@ -451,7 +451,7 @@ if (typeof LIR === "undefined"){
 						if ( escapedName0.substr(0,1).match(/[A-z]/i) ){
 							var escapedName = "[" + escapedName0.substr(0,1).toUpperCase() + escapedName0.substr(0,1).toLowerCase() + "]" + escapedName0.substr(1);
 						}else{
-							escapedName = escapedName0;
+							var escapedName = escapedName0;
 						}
 						
 						var pageReplacement = new RegExp("(\\n[ ]*?|:?File:[ ]*?|=[ ]*?|\\|)" + escapedName + "([ ]*?\\n|[ ]*?\\||\\]|\\})", "g");
@@ -700,7 +700,7 @@ if (typeof LIR === "undefined"){
 		showQueueModal: function(){
 			$.showCustomModal( 
 				"Image link updating queue", 
-				'<div id="LIRContainer" style="width: 100%;"> <div id="LIRQueue" style="overflow: scroll; width: 590px; height: 300px; float: left; border: 1px solid black; font-weight: bold; background-color: #FFFFFF;"></div> <div id="LIRLog" style="overflow-x: scroll; height: 300px; width: 200px; float: right; background-color: lightgrey; border: 1px solid black;"></div> <div id="LIRQueueLength" style="float: left;margin: 5px 15px 0px 0px; font-weight: bold;">Files in queue: <span id="LIRQueueLengthBox"></span></div> <div id="LIRNamespaceToggle" style="float: left; margin: 5px 5px 0px 0px;"><input type="checkbox" id="LIRNamespaceToggleCheck" onchange="LIR.updateNamespaceSelection()" ' + localStorage[wgUserName + "_LIRNamespaceSelection"] + '>Include <span style="font-weight: bold">links</span> in all namespaces eg: [[:File:File.png]] <span style="font-size: 9px;">(only includes Main by default)</span></div> <div style="clear: both"></div> <div id="LIRFailedLog" style="width: 798px; margin: 5px auto 0px auto; background-color: #ffbfbf; height: 150px; border: 1px solid black; font-weight: bold; overflow: scroll;">Failed items appear here after execution.</div> </div>', 
+				'<div id="LIRContainer" style="width: 100%;"> <div id="LIRQueue" style="overflow: scroll; width: 590px; height: 300px; float: left; border: 1px solid black; font-weight: bold; background-color: #FFFFFF;"></div> <div id="LIRLog" style="overflow-x: scroll; height: 300px; width: 200px; float: right; background-color: lightgrey; border: 1px solid black;"></div> <div id="LIRQueueLength" style="float: left;margin: 5px 15px 0px 0px; font-weight: bold;">Files in queue: <span id="LIRQueueLengthBox"></span></div> <div id="LIRNamespaceToggle" style="float: left; margin: 5px 5px 0px 0px;"><label><input type="checkbox" id="LIRNamespaceToggleCheck" onchange="LIR.updateNamespaceSelection()" ' + localStorage[wgUserName + "_LIRNamespaceSelection"] + '>Include <span style="font-weight: bold">links</span> in all namespaces eg: [[:File:File.png]] <span style="font-size: 9px;">(only includes Main by default)</span></label></div> <div style="clear: both"></div> <div id="LIRFailedLog" style="width: 798px; margin: 5px auto 0px auto; background-color: #ffbfbf; height: 150px; border: 1px solid black; font-weight: bold; overflow: scroll;">Failed items appear here after execution.</div> </div>', 
 				{
 					id: "optionsWindow",
 					width: 800,
