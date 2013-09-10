@@ -532,7 +532,7 @@ if (typeof LIR === "undefined"){
 						$("#LIRProgressInd").css("width", ((++LIR.queueProgress) / LIR.pageKey.length * 100) + "%");
 						
 						if (typeof result.error !== "undefined"){
-							alert("The page \"" + LIR.pageData[pageKey].title + "\" could not be submitted because of error code:\"" + result.error.code + "\". Please update links on that page manually.");
+							alert("The page \"" + LIR.pageData[pageKey].title + "\" could not be submitted because of error code:\"" + result.error.code + "\". Please update the link(s) listed below on that page manually.");
 							
 							for (var i in LIR.queueData){
 								if (LIR.queueData[i].title === LIR.pageData[pageKey].title){
