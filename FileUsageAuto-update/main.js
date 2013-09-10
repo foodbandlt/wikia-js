@@ -149,7 +149,7 @@ if (typeof LIR === "undefined"){
 			}
 			
 			/* Checks if destination file name is the same as file being renamed (since Wikia's server-sided code usually validates this) */
-			if (oldImageName.lastIndexOf(".") == oldImageName.length-4 && oldImageName.slice(oldImageName.length-4) != newImageName.slice(newImageName.length-4)){
+			if (oldImageName.lastIndexOf(".") == oldImageName.length-4 && oldImageName.slice(oldImageName.length-4).toLowerCase() != newImageName.slice(newImageName.length-4).toLowerCase()){
 				LIR.started = false;
 				if (typeof LIR.queuePosition !== "undefined"){
 					localStorage.LIRQueuedUpdatesPos++;
