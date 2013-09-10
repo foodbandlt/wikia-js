@@ -29,9 +29,7 @@ if (typeof LIRoptions !== "undefined"){
 	}
 	
 	if (typeof LIRoptions.queueButtonText !== "undefined"){
-		if (LIRoptions.queueButtonText === ""){
-			LIRoptions.queueButtonText = "Add to queue";
-		}else if (LIRoptions.queueButtonText === "Rename and add to queue"){
+		if (LIRoptions.queueButtonText === "" || LIRoptions.queueButtonText === "Rename and add to queue"){
 			LIRoptions.queueButtonText = "Add to queue";
 		}
 	}else{
@@ -280,7 +278,7 @@ if (typeof LIR === "undefined"){
 		
 		storeQueue: function(callback){
 			/* Standalone function to store the queue in window.localStorage
-				uses wgUserName as a variable key so multi-user computers on the same wiki don't get each other's queue*/
+				uses wgUserName as a variable key so multi-user computers on the same wiki don't get each other's queue */
 			localStorage[wgUserName + "_LIRQueueData"] = JSON.stringify(LIR.queueData);
 
 			if (typeof(callback) === "function"){
@@ -469,7 +467,7 @@ if (typeof LIR === "undefined"){
 							if (LIR.type == "multi"){
 								LIR.failedLog(LIR.queueData[i].oldImage, LIR.queueData[i].newImage, LIR.queueData[i].title);
 							}else{
-								alert("Unable to find \""+LIR.queueData[i].oldImage+"\" on page \""+LIR.queueData[i].title+"\". Please rename manually.");
+								alert("Unable to find \""+LIR.queueData[i].oldImage+"\" on page \""+LIR.queueData[i].title+"\" or it may be transcluded through a template. Please check and rename manually if needed.");
 							}
 						}
 					}
@@ -477,7 +475,7 @@ if (typeof LIR === "undefined"){
 					LIR.log("Submitting page content");
 					if (console) console.log("Begin submitting pages");
 					
-					/* Adds progress bar for page submission (since this is the longest part) */
+					/* Adds progress bar for page submission (since this is the longest part and something entertaining needs to happen) */
 					if (LIR.type == "multi"){
 						$(".modalToolbar").prepend("<div id='LIRQueueProgress' style='float: left; width: 200px; border: 2px solid black; height: 17px;'><div id='LIRProgressInd' style='width: 0%; height: 100%; float: left; background-color: green;'></div></div>");
 						LIR.queueProgress = 0;
@@ -511,7 +509,8 @@ if (typeof LIR === "undefined"){
 					nocreate: true,
 					redirect: false,
 					bot: true,
-					token: mediaWiki.user.tokens.get("editToken")
+					token: mediaWiki.user.tokens.get("editToken"),
+					format: "json"
 				},
 				contentType: "application/x-www-form-urlencoded",
 				error: function(){
@@ -531,6 +530,20 @@ if (typeof LIR === "undefined"){
 					if (console) console.log("Posted page \""+LIR.pageKey[pageKey]+"\"");
 					if (LIR.type == "multi"){
 						$("#LIRProgressInd").css("width", ((++LIR.queueProgress) / LIR.pageKey.length * 100) + "%");
+						
+						if (typeof result.error !== "undefined"){
+							alert("The page \"" + LIR.pageData[pageKey].title + "\" could not be submitted because of error code:\"" + result.error.code + "\". Please update links on that page manually.");
+							
+							for (var i in LIR.queueData){
+								if (LIR.queueData[i].title === LIR.pageData[pageKey].title){
+									LIR.failedLog(LIR.queueData[i].oldImage, LIR.queueData[i].newImage, LIR.queueData[i].title);
+								}
+							}
+						}
+					}else{
+						if (typeof result.error !== "undefined"){
+							alert("The page \"" + LIR.pageData[pageKey].title + "\" could not be submitted because of error code:\"" + result.error.code + "\". Please update the link(s) on that page manually.");
+						}
 					}
 					
 					
@@ -700,7 +713,7 @@ if (typeof LIR === "undefined"){
 		showQueueModal: function(){
 			$.showCustomModal( 
 				"Image link updating queue", 
-				'<div id="LIRContainer" style="width: 100%;"> <div id="LIRQueue" style="overflow: scroll; width: 590px; height: 300px; float: left; border: 1px solid black; font-weight: bold; background-color: #FFFFFF;"></div> <div id="LIRLog" style="overflow-x: scroll; height: 300px; width: 200px; float: right; background-color: lightgrey; border: 1px solid black;"></div> <div id="LIRQueueLength" style="float: left;margin: 5px 15px 0px 0px; font-weight: bold;">Files in queue: <span id="LIRQueueLengthBox"></span></div> <div id="LIRNamespaceToggle" style="float: left; margin: 5px 5px 0px 0px;"><label><input type="checkbox" id="LIRNamespaceToggleCheck" onchange="LIR.updateNamespaceSelection()" ' + localStorage[wgUserName + "_LIRNamespaceSelection"] + '>Include <span style="font-weight: bold">links</span> in all namespaces eg: [[:File:File.png]] <span style="font-size: 9px;">(only includes Main by default)</span></label></div> <div style="clear: both"></div> <div id="LIRFailedLog" style="width: 798px; margin: 5px auto 0px auto; background-color: #ffbfbf; height: 150px; border: 1px solid black; font-weight: bold; overflow: scroll;">Failed items appear here after execution.</div> </div>', 
+				'<div id="LIRContainer" style="width: 100%;"> <div id="LIRQueue" style="overflow: scroll; width: 590px; height: 300px; float: left; border: 1px solid black; font-weight: bold; background-color: #FFFFFF;"></div> <div id="LIRLog" style="overflow-x: scroll; height: 300px; width: 200px; float: right; background-color: lightgrey; border: 1px solid black;"></div> <div id="LIRQueueLength" style="float: left;margin: 5px 15px 0px 0px; font-weight: bold;">Files in queue: <span id="LIRQueueLengthBox"></span></div> <div id="LIRNamespaceToggle" style="float: left; margin: 5px 5px 0px 0px;"><label><input type="checkbox" id="LIRNamespaceToggleCheck" onchange="LIR.updateNamespaceSelection()" ' + localStorage[wgUserName + "_LIRNamespaceSelection"] + '>Include <span style="font-weight: bold">links</span> in all namespaces eg: [[:File:File.png]] <span style="font-size: 9px;">(only includes Main by default)</span></label></div> <div style="clear: both"></div> <div id="LIRFailedLog" style="width: 798px; margin: 5px auto 0px auto; background-color: #ffbfbf; height: 150px; border: 1px solid black; font-weight: bold; overflow: scroll;">Failed items appear here after execution. Note that pages that the file is transcluded through a template on will also appear here falsely.</div> </div>', 
 				{
 					id: "optionsWindow",
 					width: 800,
@@ -763,7 +776,7 @@ if (typeof LIR === "undefined"){
 				}
 			);
 		}
-	}
+	};
 		
 	if (wgPageName.indexOf("Special:MovePage/File:") != -1 && Storage){
 		LIR.appendButtonText = "<a style='margin-left: 20px;' class='wikia-button' onclick='LIR.start(\"single\")'>" + LIRoptions.singleButtonText + "</a><a style='margin-left: 20px;' class='wikia-button' onclick='LIR.start(\"multi\")'>" + LIRoptions.queueButtonText + "</a>";
