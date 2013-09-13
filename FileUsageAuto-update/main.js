@@ -452,7 +452,7 @@ if (typeof LIR === "undefined"){
 							var escapedName = escapedName0;
 						}
 						
-						var pageReplacement = new RegExp("(\\n[ ]*?|:?File:[ ]*?|=[ ]*?|\\|)" + escapedName + "([ ]*?\\n|[ ]*?\\||\\]|\\})", "g");
+						var pageReplacement = new RegExp("(\\n[ ]*?|:?File:[ ]*?|:?Image:[ ]*?|=[ ]*?|\\|)" + escapedName + "([ ]*?\\n|[ ]*?\\||\\]|\\})", "g");
 						var replacementReg = new RegExp(escapedName, "g");
 						
 						if (LIR.pageData[pageKey].content.search(pageReplacement) != -1){
@@ -467,7 +467,7 @@ if (typeof LIR === "undefined"){
 							if (LIR.type == "multi"){
 								LIR.failedLog(LIR.queueData[i].oldImage, LIR.queueData[i].newImage, LIR.queueData[i].title);
 							}else{
-								alert("Unable to find \""+LIR.queueData[i].oldImage+"\" on page \""+LIR.queueData[i].title+"\" or it may be transcluded through a template. Please check and rename manually if needed.");
+								alert("Unable to find \""+LIR.queueData[i].oldImage+"\" on page \""+LIR.queueData[i].title+"\"; it may be transcluded through a template. Please check and rename manually if needed.");
 							}
 						}
 					}
