@@ -22,7 +22,7 @@
 // 4. Delete (possibly) old category
 
 
-// BUTTONS (Works) Test
+// BUTTONS (Works)
 
 ;(function ($, mw) {
     'use strict';
@@ -94,9 +94,9 @@ if (typeof CRA === "undefined"){
 			}
 			
 			/* Sets variables used by the function */
-			CRA.oldName = $.getUrlVar("categoryname"),
-			CRA.newName = document.getElementById("wpNewTitleMain").value, /////////////////////////TBD
-			reason = $("#wpReason").val(); /////////////////////////TBD
+			CRA.oldName = decodeURIComponent($.getUrlVar('categoryname').replace(/_/g, " ")).replace(/%22/g, '"').replace(/%27/g, "'"),
+			CRA.newName = document.getElementById("wpNewTitleMain").value, /////////////////////////TBD, need to procure the name from the rename page that you're making
+			reason = $("#wpReason").val(); /////////////////////////TBD, need to procure the reason from the rename page that you're making
 			CRA.pageKey = [];
 			CRA.queueData = [];
  
