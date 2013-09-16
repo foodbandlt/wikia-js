@@ -99,6 +99,7 @@ if (typeof CRA === "undefined"){
 			reason = $("#wpReason").val(); /////////////////////////TBD, need to procure the reason from the rename page that you're making
 			CRA.pageKey = [];
 			CRA.queueData = [];
+			CRA.oldCategoryContent;
  
 			/* Check if destination file name is in use */
 			$.getJSON("/api.php?action=query&prop=revisions&rvprop=content&titles=Category:" + encodeURIComponent(CRA.newName.replace(/ /g, "_")).replace(/"/g, "%22").replace(/'/g, "%27") + "&format=json", function(result){
@@ -118,14 +119,18 @@ if (typeof CRA === "undefined"){
 									CRA.pageKey[CRA.pageKey.length] = title;
 								}
 							}
-							CRA.createNewPage(function(){
-								CRA.processQueue(function(){
+							
+							/* Processing page content first to not have to send a separate API request
+								to retrieve old category contents */
+							
+							CRA.processPageContent(function(){
+								CRA.createNewPage(function(){
 									if (console) console.log("Begin submitting pages");
 									
 									for (i=0; i<CRA.pageData.length; i++){
 										CRA.submitChangedPages(i, function(){
 											CRA.deletePage(function() {
-												alert("Action completed);
+												alert("Action completed");
 												location.href = "/wiki/Category:" + encodeURIComponent(newCategoryName.replace(/ /g, "_")).replace(/"/g, "%22").replace(/'/g, "%27");
 											});
 										});
@@ -153,9 +158,9 @@ if (typeof CRA === "undefined"){
 				async: true,
 				data: {
 					action: "edit",
-					title: CRA.newName,
+					title: "Category:" + CRA.newName,
 					summary: "REASON", /////////////////////TBD, get summary from move page
-					text: "TEXT", ////////////////TBD, get old page text
+					text: CRA.oldCategoryContent,
 					minor: true,
 					recreate: true,
 					createonly: true,
@@ -201,17 +206,22 @@ if (typeof CRA === "undefined"){
 					action: "query",
 					prop: "revisions",
 					rvprop: "content",
-					titles: CRA.pageKey.join("|"),
+					titles: CRA.pageKey.join("|") + "|" + CRA.oldName,
 					format: "json"
 				},
 				function(result){
 					/* Saves page contents for each page in CRA.pageData */
 					for (var i in result.query.pages){
 						var keyNum = CRA.pageKey.indexOf(result.query.pages[i].title);
-						CRA.pageData[keyNum] = {
-							title: CRA.pageKey[keyNum],
-							content: result.query.pages[i].revisions[0]["*"],
-						};
+						
+						if (result.query.pages[i].title == CRA.oldName){
+							CRA.oldCategoryContent = result.query.pages[i].revisions[0]["*"];
+						}else{
+							CRA.pageData[keyNum] = {
+								title: CRA.pageKey[keyNum],
+								content: result.query.pages[i].revisions[0]["*"],
+							};
+						}
 					}
 					
 					if (console) console.log("Page contents retrieved and saved");
