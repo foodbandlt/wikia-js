@@ -22,36 +22,42 @@
 // 4. Delete (possibly) old category
 
 
-// BUTTONS (Works) Test
+// BUTTONS (Works)
 
-;(function ($, mw, window, document) {
+;(function ($, mw) {
     'use strict';
-	if (mw.config.get('wgAction') !== 'view' || mw.config.get('wgNamespaceNumber') !== 14) {
-		return;
-	}
+    $(function () {
+        if (mw.config.get('wgAction') !== 'view' || mw.config.get('wgNamespaceNumber') !== 14) {
+            return;
+        }
 
-	$('.wikia-menu-button .WikiaMenuElement').append(
-		$('<li/>').append(
-			$('<a/>', {
-				'href': '/index.php?title=Special:BlankPage&blankspecial=categoryrename&categoryname=' + mw.config.get('wgTitle'),
-				'title': 'Rename',
-				'html': 'Rename'
-			})
-		)
-	);
+        $('.wikia-menu-button .WikiaMenuElement').append(
+            $('<li/>').append(
+                $('<a/>', {
+					'href': '/wiki/Special:BlankPage?blankspecial=categoryrename&categoryname=' + encodeURIComponent(mw.config.get('wgTitle').replace(/ /g, "_")).replace(/"/g, "%22").replace(/'/g, "%27"),
+                    'title': 'Rename',
+                    'html': 'Rename'
+                })
+            )
+        );
+    }());
  
 // BLANK PAGE
-	
-	if(mw.config.get('wgCanonicalSpecialPageName') === 'Blankpage' && $.getUrlVar('blankspecial') === 'categoryrename') {
+
+
+
+	if (mw.config.get('wgCanonicalSpecialPageName') === 'Blankpage' && $.getUrlVar('blankspecial') === 'categoryrename') {
+		var createCategoryRenameForm = function() {
+			var form = 'Using the form below will rename a category, by changing the category names on pages that the category is used one. The old title will be deleted and moved to the old title. Be sure to check <a href="/wiki/Special:WantedCategories">wanted categories</a>. You are responsible for making sure that links continue to point where they are supposed to go.<br /><br />Note that the page will <strong>not</strong> be moved if there is already a page to the new title.<br /><br /><strong>Warning!</strong> This can be drastic and unexpected for a popular page; please be sure you understand the consequences of this before proceeding.<br /><fieldset><legend>Rename category</legend><table border="0" id="mw-renamecategory-table"><tr><td class="mw-label">Current name:</td><td class="mw-input"><strong><a href="/wiki/' + $.getUrlVar('categoryname') + '">Category:' + decodeURIComponent($.getUrlVar('categoryname').replace(/_/g, " ")).replace(/%22/g, '"').replace(/%27/g, "'") + '</a></strong></td></tr><tr><td class="mw-label"><label for="wpNewTitleMain">Rename category:</label></td>';
+			$('#WikiaArticle').html(form);
+		}
+		
 		document.title = 'Category Rename Auto-Update';
-		var form = 'Using the form below will rename a category, by changing the category names on pages that the category is used one. The old title will be deleted and moved to the old title. Be sure to check <a href="' + mw.config.get("wgServer") + '.wikia.com/wiki/Special:WantedCategories">wanted categories</a>. You are responsible for making sure that links continue to point where they are supposed to go.<br /><br />Note that the page will <strong>not</strong> be moved if there is already a page to the new title.<br /><br /><strong>Warning!</strong> This can be drastic and unexpected for a popular page; please be sure you understand the consequences of this before proceeding.<br /><form method="post" action="' + mw.config.get("wgServer") + '/wiki/Wikianswers" id="renamecategory"><fieldset><legend>Rename category</legend><table border="0" id="mw-renamecategory-table"><tr><td class="mw-label">Current name:</td><td class="mw-input"><strong><a href="' + mw.config.get("wgServer") + '/wiki/' + mw.config.get("wgTitle") + '>' + mw.config.get("wgTitle") + '</a></strong></td></tr><tr><td class="mw-label"><label for="wpNewTitleMain">Rename category:</label></td>';
-		$('#WikiaArticle').html(form);
+		createCategoryRenameForm();
 	}
-}(this.jQuery, this.mediaWiki, window, document));
 
+}(this.jQuery, this.mediaWiki));
 
-
-// Options processing
  
 if (typeof CRA === "undefined"){
 
@@ -88,17 +94,17 @@ if (typeof CRA === "undefined"){
 			}
 			
 			/* Sets variables used by the function */
-			var oldCategoryName = $.getUrlVar("categoryname"),
-				newCategoryName = document.getElementById("wpNewTitleMain").value, /////////////////////////TBD
-				reason = $("#wpReason").val(); /////////////////////////TBD
+			CRA.oldName = $.getUrlVar("categoryname"),
+			CRA.newName = document.getElementById("wpNewTitleMain").value, /////////////////////////TBD
+			reason = $("#wpReason").val(); /////////////////////////TBD
 			CRA.pageKey = [];
 			CRA.queueData = [];
  
 			/* Check if destination file name is in use */
-			$.getJSON("/api.php?action=query&prop=revisions&rvprop=content&titles=Category:"+encodeURIComponent(newCategoryName.replace(/ /g, "_")).replace(/"/g, "%22").replace(/'/g, "%27")+"&format=json", function(result){
+			$.getJSON("/api.php?action=query&prop=revisions&rvprop=content&titles=Category:" + encodeURIComponent(CRA.newName.replace(/ /g, "_")).replace(/"/g, "%22").replace(/'/g, "%27") + "&format=json", function(result){
 				if (typeof result.query.pages[-1] !== "undefined"){
 					/* If not, then get file usage for category */
-					$.getJSON("/api.php?action=query&list=categorymembers&cmtitle=Category:" + encodeURIComponent(oldCategoryName.replace(/ /g, "_")).replace(/"/g, "%22").replace(/'/g, "%27") + "&cmprop=title&cmlimit=5000", function(result){
+					$.getJSON("/api.php?action=query&list=categorymembers&cmtitle=Category:" + encodeURIComponent(CRA.oldName.replace(/ /g, "_")).replace(/"/g, "%22").replace(/'/g, "%27") + "&cmprop=title&cmlimit=5000", function(result){
 						var categoryUsage = result.query.categorymembers;
  
 						if (console) console.log("Category usage successfully retrieved");
@@ -112,8 +118,20 @@ if (typeof CRA === "undefined"){
 									CRA.pageKey[CRA.pageKey.length] = title;
 								}
 							}
-
-							CRA.processQueue()
+							CRA.createNewPage(function(){
+								CRA.processQueue(function(){
+									if (console) console.log("Begin submitting pages");
+									
+									for (i=0; i<CRA.pageData.length; i++){
+										CRA.submitChangedPages(i, function(){
+											CRA.deletePage(function() {
+												alert("Action completed);
+												location.href = "/wiki/Category:" + encodeURIComponent(newCategoryName.replace(/ /g, "_")).replace(/"/g, "%22").replace(/'/g, "%27");
+											});
+										});
+									}
+								})
+							});
 						}else{
 							/* Else, prompt to use normal renaming, since this is kind of pointless otherwise */
 							CRA.started = false;
@@ -126,6 +144,44 @@ if (typeof CRA === "undefined"){
 				}
 			});
  
+		},
+		
+		createNewPage: function(callback){
+			$.ajax({
+				url: "/api.php",
+				type: "POST",
+				async: true,
+				data: {
+					action: "edit",
+					title: CRA.newName,
+					summary: "REASON", /////////////////////TBD, get summary from move page
+					text: "TEXT", ////////////////TBD, get old page text
+					minor: true,
+					recreate: true,
+					createonly: true,
+					bot: true,
+					token: mediaWiki.user.tokens.get("editToken"),
+					format: "json"
+				},
+				contentType: "application/x-www-form-urlencoded",
+				error: function(){
+					alert("Unable to create category \"" + CRA.newName + "\".");
+					CRA.started = false;
+				},
+				success: function(result){
+					if (console) console.log("Created new category page \"" + CRA.newName + "\"");
+
+					if (typeof result.error !== "undefined"){
+						alert("The page \"" + CRA.pageData[pageKey].title + "\" could not be submitted because of error code:\"" + result.error.code + "\".");
+						return false;
+					}
+					
+					/* Call callback if exists */
+					if (typeof(callback) === "function"){
+						callback();
+					}
+				}					
+			});
 		},
 		
 		processPageContent: function(callback) {
@@ -164,9 +220,8 @@ if (typeof CRA === "undefined"){
 					if (console) console.log("Begin processing page content.");
 					
 					/* Replacing image name on each page */
-					for (i=0; i<CRA.queueData.length; i++){
-						var pageKey = CRA.pageKey.indexOf(CRA.queueData[i].title);
-						var escapedName0 = window.CRA.queueData[i].oldImage.replace(/\*/g, "\\*").replace(/\?/g, "\\?").replace(/\./g, "\\.").replace(/ /g, "[ _]*?").replace(/\(/g, "\\(").replace(/\)/g, "\\)");
+					for (i=0; i<CRA.pageData.length; i++){
+						var escapedName0 = CRA.oldName.replace(/\*/g, "\\*").replace(/\?/g, "\\?").replace(/\./g, "\\.").replace(/ /g, "[ _]*?").replace(/\(/g, "\\(").replace(/\)/g, "\\)");
 						
 						if ( escapedName0.substr(0,1).match(/[A-z]/i) ){
 							var escapedName = "[" + escapedName0.substr(0,1).toUpperCase() + escapedName0.substr(0,1).toLowerCase() + "]" + escapedName0.substr(1);
@@ -176,45 +231,114 @@ if (typeof CRA === "undefined"){
 						
 						var pageReplacement = new RegExp("(\\[:?Category:[ ]*?|=[ ]*?|\\|)" + escapedName + "([ ]*?\\||\\]|\\})", "g");
 						var replacementReg = new RegExp(escapedName, "g");
+						var regExec;
 						
-						if (CRA.pageData[pageKey].content.search(pageReplacement) != -1){
-							CRA.pageData[pageKey].changed = true;
-							if (console) console.log("\""+CRA.queueData[i].oldImage+"\" replaced on page \""+CRA.queueData[i].title+"\"");
-							
-							while ((regExec = pageReplacement.exec(CRA.pageData[pageKey].content)) != null){
-								CRA.pageData[pageKey].content = CRA.pageData[pageKey].content.replace(regExec[0], regExec[0].replace(replacementReg, CRA.queueData[i].newImage));
-								pageReplacement.lastIndex += (regExec[0].replace(replacementReg, CRA.queueData[i].newImage).length - regExec[0].length) - (regExec[2].length);
-							}
+						if (CRA.pageData[i].content.search(pageReplacement) != -1){
+							regExec = pageReplacement.exec(CRA.pageData[i].content);
+							CRA.pageData[i].content = CRA.pageData[i].content.replace(regExec[0], regExec[0].replace(replacementReg, CRA.newName));
 						}else{
-							if (CRA.type == "multi"){
-								CRA.failedLog(CRA.queueData[i].oldImage, CRA.queueData[i].newImage, CRA.queueData[i].title);
-							}else{
-								alert("Unable to find \""+CRA.queueData[i].oldImage+"\" on page \""+CRA.queueData[i].title+"\"; it may be transcluded through a template. Please check and rename manually if needed.");
-							}
+							alert("Unable to find \"" + CRA.oldName + "\" on page \"" + CRA.pageData[i].title + "\"; it may be transcluded through a template. Please check and update manually if needed.");
 						}
 					}
 					
-					CRA.log("Submitting page content");
-					if (console) console.log("Begin submitting pages");
+					//CRA.log("Submitting page content");
 					
-					/* Adds progress bar for page submission (since this is the longest part and something entertaining needs to happen) */
+					/* Adds progress bar for page submission (since this is the longest part and something entertaining needs to happen) 
 					if (CRA.type == "multi"){
 						$(".modalToolbar").prepend("<div id='CRAQueueProgress' style='float: left; width: 200px; border: 2px solid black; height: 17px;'><div id='CRAProgressInd' style='width: 0%; height: 100%; float: left; background-color: green;'></div></div>");
 						CRA.queueProgress = 0;
 					}
+					*/
 					
-					/* Submits edited pages */
-					for (i=0; i<CRA.pageData.length; i++){
-						if (CRA.pageData[i].changed == true){
-							CRA.submitChangedPages(i, callback);
-						}else{
-							CRA.requestCompleted[i] = true;
-						}
+					if (typeof(callback) === "function"){
+						callback();
 					}
 				},
 				"json"
 			);
 		},
+		
+		submitChangedPages: function(pageKey, callback) {
+			
+			$.ajax({
+				url: "/api.php",
+				type: "POST",
+				async: true,
+				data: {
+					action: "edit",
+					title: CRA.pageData[pageKey].title,
+					summary: "Updating category " + CRA.oldName + " -> " + CRA.newName + " (automatic)",
+					text: CRA.pageData[pageKey].content,
+					minor: true,
+					nocreate: true,
+					redirect: false,
+					bot: true,
+					token: mediaWiki.user.tokens.get("editToken"),
+					format: "json"
+				},
+				contentType: "application/x-www-form-urlencoded",
+				error: function(){
+					CRA.requestCompleted[pageKey] = true;
+					alert("Unable to publish page \""+CRA.pageKey[pageKey]+"\".  Please rename images on that page manually.");
+					if (CRA.requestCompleted.indexOf(false) == -1){
+						if (typeof(callback) === "function"){
+							callback();
+						}
+					}	
+				},
+				success: function(result){
+					CRA.requestCompleted[pageKey] = true;
+					if (console) console.log("Posted page \""+CRA.pageKey[pageKey]+"\"");
+
+					if (typeof result.error !== "undefined"){
+						alert("The page \"" + CRA.pageData[pageKey].title + "\" could not be submitted because of error code:\"" + result.error.code + "\". Please update the link(s) on that page manually.");
+					}
+					
+					if (CRA.requestCompleted.indexOf(false) == -1){
+						/* Call callback if exists */
+						if (typeof(callback) === "function"){
+							callback();
+						}
+					}
+				}					
+			});
+		},
+		
+		deletePage(callback){
+			$.ajax({
+				url: "/api.php",
+				type: "POST",
+				async: true,
+				data: {
+					action: "delete",
+					title: CRA.oldName,
+					reason: "REASON", /////////////////////TBD, use same reason from rename page
+					token: mediaWiki.user.tokens.get("editToken"),
+					format: "json"
+				},
+				contentType: "application/x-www-form-urlencoded",
+				error: function(){
+					alert("Unable to delete category \"" + CRA.newName + "\".  Please delete manually.");
+					CRA.started = false;
+					
+					if (typeof(callback) === "function"){
+						callback();
+					}
+				},
+				success: function(result){
+					if (console) console.log("Deleted category page \"" + CRA.newName + "\"");
+
+					if (typeof result.error !== "undefined"){
+						alert("The page \"" + CRA.pageData[pageKey].title + "\" could not be deleted because of error code:\"" + result.error.code + "\".  Please delete manually.");
+					}
+					
+					/* Call callback if exists */
+					if (typeof(callback) === "function"){
+						callback();
+					}
+				}					
+			});
+		};
 
 
 //</nowiki>
