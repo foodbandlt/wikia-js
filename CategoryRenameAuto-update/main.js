@@ -102,6 +102,7 @@ if (typeof CRA === "undefined"){
 				newCategoryName = document.getElementById("wpNewTitleMain").value, /////////////////////////TBD
 				reason = $("#wpReason").val(); /////////////////////////TBD
 			CRA.pageKey = [];
+			CRA.queueData = [];
  
 			/* Check if destination file name is in use */
 			$.getJSON("/api.php?action=query&prop=revisions&rvprop=content&titles=Category:"+encodeURIComponent(newCategoryName.replace(/ /g, "_")).replace(/"/g, "%22").replace(/'/g, "%27")+"&format=json", function(result){
@@ -120,85 +121,111 @@ if (typeof CRA === "undefined"){
 								if (CRA.pageKey.indexOf(title) == -1){
 									CRA.pageKey[CRA.pageKey.length] = title;
 								}
-
-								/* Temporary until Wikia fixes issue with editing blog comments through the API */
-								if (title.search(/User blog comment/i) == -1){
-									for (i = 0; i <= CRA.queueData.length; i++){
-										if (i == CRA.queueData.length){
-											CRA.queueData[CRA.queueData.length] = {
-												oldCategory: oldCategoryName,
-												newCategory: newCategoryName,
-												title: title,
-												reason: reason
-											};
-											break;
-										}else if (CRA.queueData[i].title == title && CRA.queueData[i].oldCategory == oldCategoryName && CRA.queueData[i].newCategory == newCategoryName){
-											break;
-										}
-									}
-								}else{
-									CRABlogComment = true;
-								}
 							}
 
-							/* Temporary until Wikia fixes issue with editing blog comments through the API */
-							if (typeof(CRABlogComment) === "undefined"){
-								/* Stores queue if renaming multiple categorys, or updates file usage if only renaming one */
-								if (CRA.type == "multi"){
-									CRA.storeQueue(function() {
-										CRA.started = false;
-										localStorage.CRAQueuedUpdatesPos++;
-										window.location = "/wiki/Category:" + encodeURIComponent(oldCategoryName.replace(/ /g, "_")).replace(/"/g, "%22").replace(/'/g, "%27");
-									});
-								}else{
-									/* This may seem odd, but because I use CRA.processQueue() for both single and multiple category 
-										updating, it requires CRA.started to be false to start */
-									CRA.started = false;
-									CRA.processQueue(function(){
-										$("#movepage").submit();
-									});
-								}
-							}else{
-								if (typeof CRA.queuePosition !== "undefined"){
-									localStorage.CRAQueuedUpdatesPos++;
-									delete CRA.queuePosition;
-								}
-								CRA.updateStatus(false, "File used in blog comment. Unable to update blog comments.");
-							}
-
-
+							CRA.processQueue()
 						}else{
 							/* Else, prompt to use normal renaming, since this is kind of pointless otherwise */
 							CRA.started = false;
-							if (typeof CRA.queuePosition !== "undefined"){
-								localStorage.CRAQueuedUpdatesPos++;
-								delete CRA.queuePosition;
-							}
-							CRA.updateStatus(false, "File not being used on any pages");
+							CRA.updateStatus(false, "Category not added to any pages");
 						}
 					});
 				}else{
 					CRA.started = false;
-					if (typeof CRA.queuePosition !== "undefined"){
-						localStorage.CRAQueuedUpdatesPos++;
-						delete CRA.queuePosition;
-					}
-					CRA.updateStatus(false, "File name already exists");
+					CRA.updateStatus(false, "Destination name already exists");
 				}
 			});
  
 		},
- 
-		storeQueue: function(callback){
-			/* Standalone function to store the queue in window.localStorage
-				uses wgUserName as a variable key so multi-user computers on the same wiki don't get each other's queue */
-			localStorage[wgUserName + "_CRAQueueData"] = JSON.stringify(CRA.queueData);
- 
-			if (typeof(callback) === "function"){
-				callback();
+		
+		processPageContent: function(callback) {
+			if (console) console.log("Start processing page content");
+			
+			/* Sets progress checking variables */
+			for (i = 0; i<CRA.pageKey.length; i++){
+				CRA.requestCompleted[i] = false;
 			}
- 
+
+			if (console) console.log("Getting page contents");
+			
+			/* Calls API for page contents */
+			$.post(
+				"/api.php",
+				{
+					action: "query",
+					prop: "revisions",
+					rvprop: "content",
+					titles: CRA.pageKey.join("|"),
+					format: "json"
+				},
+				function(result){
+					/* Saves page contents for each page in CRA.pageData */
+					for (var i in result.query.pages){
+						var keyNum = CRA.pageKey.indexOf(result.query.pages[i].title);
+						CRA.pageData[keyNum] = {
+							title: CRA.pageKey[keyNum],
+							content: result.query.pages[i].revisions[0]["*"],
+						};
+					}
+					
+					if (console) console.log("Page contents retrieved and saved");
+					CRA.log("Page contents retrieved and saved");
+					
+					if (console) console.log("Begin processing page content.");
+					
+					/* Replacing image name on each page */
+					for (i=0; i<CRA.queueData.length; i++){
+						var pageKey = CRA.pageKey.indexOf(CRA.queueData[i].title);
+						var escapedName0 = window.CRA.queueData[i].oldImage.replace(/\*/g, "\\*").replace(/\?/g, "\\?").replace(/\./g, "\\.").replace(/ /g, "[ _]*?").replace(/\(/g, "\\(").replace(/\)/g, "\\)");
+						
+						if ( escapedName0.substr(0,1).match(/[A-z]/i) ){
+							var escapedName = "[" + escapedName0.substr(0,1).toUpperCase() + escapedName0.substr(0,1).toLowerCase() + "]" + escapedName0.substr(1);
+						}else{
+							var escapedName = escapedName0;
+						}
+						
+						var pageReplacement = new RegExp("(\\[:?Category:[ ]*?|=[ ]*?|\\|)" + escapedName + "([ ]*?\\||\\]|\\})", "g");
+						var replacementReg = new RegExp(escapedName, "g");
+						
+						if (CRA.pageData[pageKey].content.search(pageReplacement) != -1){
+							CRA.pageData[pageKey].changed = true;
+							if (console) console.log("\""+CRA.queueData[i].oldImage+"\" replaced on page \""+CRA.queueData[i].title+"\"");
+							
+							while ((regExec = pageReplacement.exec(CRA.pageData[pageKey].content)) != null){
+								CRA.pageData[pageKey].content = CRA.pageData[pageKey].content.replace(regExec[0], regExec[0].replace(replacementReg, CRA.queueData[i].newImage));
+								pageReplacement.lastIndex += (regExec[0].replace(replacementReg, CRA.queueData[i].newImage).length - regExec[0].length) - (regExec[2].length);
+							}
+						}else{
+							if (CRA.type == "multi"){
+								CRA.failedLog(CRA.queueData[i].oldImage, CRA.queueData[i].newImage, CRA.queueData[i].title);
+							}else{
+								alert("Unable to find \""+CRA.queueData[i].oldImage+"\" on page \""+CRA.queueData[i].title+"\"; it may be transcluded through a template. Please check and rename manually if needed.");
+							}
+						}
+					}
+					
+					CRA.log("Submitting page content");
+					if (console) console.log("Begin submitting pages");
+					
+					/* Adds progress bar for page submission (since this is the longest part and something entertaining needs to happen) */
+					if (CRA.type == "multi"){
+						$(".modalToolbar").prepend("<div id='CRAQueueProgress' style='float: left; width: 200px; border: 2px solid black; height: 17px;'><div id='CRAProgressInd' style='width: 0%; height: 100%; float: left; background-color: green;'></div></div>");
+						CRA.queueProgress = 0;
+					}
+					
+					/* Submits edited pages */
+					for (i=0; i<CRA.pageData.length; i++){
+						if (CRA.pageData[i].changed == true){
+							CRA.submitChangedPages(i, callback);
+						}else{
+							CRA.requestCompleted[i] = true;
+						}
+					}
+				},
+				"json"
+			);
 		},
+
 
 //</nowiki>
 //</source>
