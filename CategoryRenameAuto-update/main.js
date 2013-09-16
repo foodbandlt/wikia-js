@@ -24,40 +24,30 @@
 
 // BUTTONS (Works)
 
-;(function ($, mw) {
+;(function ($, mw, window, document) {
     'use strict';
-    $(function () {
-        if (mw.config.get('wgAction') !== 'view' || mw.config.get('wgNamespaceNumber') !== 14) {
-            return;
-        }
+	if (mw.config.get('wgAction') !== 'view' || mw.config.get('wgNamespaceNumber') !== 14) {
+		return;
+	}
 
-        $('.wikia-menu-button .WikiaMenuElement').append(
-            $('<li/>').append(
-                $('<a/>', {
-                    'href': '/index.php?title=Special:BlankPage&blankspecial=categoryrename&categoryname=' + mw.config.get('wgTitle'),
-                    'title': 'Rename',
-                    'html': 'Rename'
-                })
-            )
-        );
-    });
+	$('.wikia-menu-button .WikiaMenuElement').append(
+		$('<li/>').append(
+			$('<a/>', {
+				'href': '/index.php?title=Special:BlankPage&blankspecial=categoryrename&categoryname=' + mw.config.get('wgTitle'),
+				'title': 'Rename',
+				'html': 'Rename'
+			})
+		)
+	);
  
-}(this.jQuery, this.mediaWiki));
-
-
-
-
 // BLANK PAGE
 	
-if(mw.config.get('wgCanonicalSpecialPageName') === 'Blankpage' && $.getUrlVar('blankspecial') === 'categoryrename') {
-    document.title = 'Category Rename Auto-Update';
-    createCategoryRenameForm();
-}
- 
-function createCategoryRenameForm() {
-    var form = 'Using the form below will rename a category, by changing the category names on pages that the category is used one. The old title will be deleted and moved to the old title. Be sure to check <a href="' + mw.config.get("wgServer") + '.wikia.com/wiki/Special:WantedCategories">wanted categories</a>. You are responsible for making sure that links continue to point where they are supposed to go.<br /><br />Note that the page will <strong>not</strong> be moved if there is already a page to the new title.<br /><br /><strong>Warning!</strong> This can be drastic and unexpected for a popular page; please be sure you understand the consequences of this before proceeding.<br /><form method="post" action="' + mw.config.get("wgServer") + '/wiki/Wikianswers" id="renamecategory"><fieldset><legend>Rename category</legend><table border="0" id="mw-renamecategory-table"><tr><td class="mw-label">Current name:</td><td class="mw-input"><strong><a href="' + mw.config.get("wgServer") + '/wiki/' + mw.config.get("wgTitle") + '>' + mw.config.get("wgTitle") + '</a></strong></td></tr><tr><td class="mw-label"><label for="wpNewTitleMain">Rename category:</label></td>';
-    $('#WikiaArticle').html(form);
-}
+	if(mw.config.get('wgCanonicalSpecialPageName') === 'Blankpage' && $.getUrlVar('blankspecial') === 'categoryrename') {
+		document.title = 'Category Rename Auto-Update';
+		var form = 'Using the form below will rename a category, by changing the category names on pages that the category is used one. The old title will be deleted and moved to the old title. Be sure to check <a href="' + mw.config.get("wgServer") + '.wikia.com/wiki/Special:WantedCategories">wanted categories</a>. You are responsible for making sure that links continue to point where they are supposed to go.<br /><br />Note that the page will <strong>not</strong> be moved if there is already a page to the new title.<br /><br /><strong>Warning!</strong> This can be drastic and unexpected for a popular page; please be sure you understand the consequences of this before proceeding.<br /><form method="post" action="' + mw.config.get("wgServer") + '/wiki/Wikianswers" id="renamecategory"><fieldset><legend>Rename category</legend><table border="0" id="mw-renamecategory-table"><tr><td class="mw-label">Current name:</td><td class="mw-input"><strong><a href="' + mw.config.get("wgServer") + '/wiki/' + mw.config.get("wgTitle") + '>' + mw.config.get("wgTitle") + '</a></strong></td></tr><tr><td class="mw-label"><label for="wpNewTitleMain">Rename category:</label></td>';
+		$('#WikiaArticle').html(form);
+	}
+}(this.jQuery, this.mediaWiki, window, document));
 
 
 
