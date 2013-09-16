@@ -12,7 +12,7 @@
 // Todo: All & Make it work
 // Set Special:BlankPage?categoryname=' + mw.config.get('wgTitle'),
 // Add the edit summary via api "&summary=" thingy
-// Admin only possibly?
+// Admin only possibly? Teest
 
 
 // How it will work:
