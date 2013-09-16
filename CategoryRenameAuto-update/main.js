@@ -51,7 +51,7 @@
 
 
 
-// Options processing TEST
+// Options processing
  
 if (typeof CRA === "undefined"){
 
