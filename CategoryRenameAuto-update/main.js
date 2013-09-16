@@ -22,7 +22,7 @@
 // 4. Delete (possibly) old category
 
 
-// BUTTONS (Works)
+// BUTTONS (Works) Test
 
 ;(function ($, mw, window, document) {
     'use strict';
