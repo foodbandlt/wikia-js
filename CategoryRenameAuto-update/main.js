@@ -5,24 +5,12 @@
 * Description:
 * Updates category links in use on the wiki when category is renamed.
 *
-* @Author Foodbandlt and Jr Mime
+* @Authors Foodbandlt and Jr Mime
 *
 **/
 
-// Todo: All & Make it work
-// Set Special:BlankPage?categoryname=' + mw.config.get('wgTitle'),
-// Add the edit summary via api "&summary=" thingy
-// Admin only possibly? Teest
 
-
-// How it will work:
-// 1. Get categories on pages
-// 2. Create new category name (copy from old to new)
-// 3. Fix category name on pages
-// 4. Delete (possibly) old category
-
-
-// BUTTON (Works)
+// Create button
 
 ;(function ($, mw) {
     'use strict';
@@ -42,7 +30,7 @@
         );
     }());
  
-// BLANK PAGE (Works)
+// Blank page setup
 
 
 
@@ -64,7 +52,8 @@
 
 }(this.jQuery, this.mediaWiki));
 
- 
+
+// Start script 
 if (typeof CRA === "undefined"){
 
 	CRA = {
@@ -148,14 +137,14 @@ if (typeof CRA === "undefined"){
 											
 											if (document.getElementById("CRADeleteRadio").checked == true){
 												CRA.deleteOldPage(function() {
-													CRA.updateStatus(false, 'Rename complete.  New category: <a href="/wiki/Category:' +  encodeURIComponent(CRA.newName.replace(/ /g, "_")).replace(/"/g, "%22").replace(/'/g, "%27") + '">' + CRA.newName + '</a>');
+													CRA.updateStatus(false, 'Rename complete.  New category: <a href="/wiki/Category:' +  encodeURIComponent(CRA.newName.replace(/ /g, "_")).replace(/"/g, "%22").replace(/'/g, "%27") + '">' + CRA.newName + '</a>.');
 												});
 											}else if (document.getElementById("CRARedirectRadio").checked == true){
 												CRA.redirectOldPage(function(){
-													CRA.updateStatus(false, 'Rename complete.  New category: <a href="/wiki/Category:' +  encodeURIComponent(CRA.newName.replace(/ /g, "_")).replace(/"/g, "%22").replace(/'/g, "%27") + '">' + CRA.newName + '</a>');
+													CRA.updateStatus(false, 'Rename complete.  New category: <a href="/wiki/Category:' +  encodeURIComponent(CRA.newName.replace(/ /g, "_")).replace(/"/g, "%22").replace(/'/g, "%27") + '">' + CRA.newName + '</a>.');
 												});
 											}else{
-												CRA.updateStatus(false, 'Rename complete.  New category: <a href="/wiki/Category:' +  encodeURIComponent(CRA.newName.replace(/ /g, "_")).replace(/"/g, "%22").replace(/'/g, "%27") + '">' + CRA.newName + '</a>');
+												CRA.updateStatus(false, 'Rename complete.  New category: <a href="/wiki/Category:' +  encodeURIComponent(CRA.newName.replace(/ /g, "_")).replace(/"/g, "%22").replace(/'/g, "%27") + '">' + CRA.newName + '</a>.');
 											}
 										});
 									}
@@ -164,12 +153,12 @@ if (typeof CRA === "undefined"){
 						}else{
 							/* Else, prompt to use normal renaming, since this is kind of pointless otherwise */
 							CRA.started = false;
-							CRA.updateStatus(false, "Category not used on any pages, rename manually");
+							CRA.updateStatus(false, "Category not used on any pages, rename manually.");
 						}
 					});
 				}else{
 					CRA.started = false;
-					CRA.updateStatus(false, "Destination name already exists");
+					CRA.updateStatus(false, "Destination name already exists.");
 				}
 			});
  
@@ -183,7 +172,7 @@ if (typeof CRA === "undefined"){
 				data: {
 					action: "edit",
 					title: "Category:" + CRA.newName,
-					summary: CRA.reason,
+					summary: CRA.reason + "(automatic)",
 					text: CRA.oldCategoryContent,
 					minor: true,
 					recreate: true,
@@ -252,7 +241,7 @@ if (typeof CRA === "undefined"){
 					
 					if (console) console.log("Begin processing page content.");
 					
-					/* Replacing image name on each page */
+					/* Replacing category name on each page */
 					for (i=0; i<CRA.pageData.length; i++){
 						var escapedName0 = CRA.oldName.replace(/\*/g, "\\*").replace(/\?/g, "\\?").replace(/\./g, "\\.").replace(/ /g, "[ _]*?").replace(/\(/g, "\\(").replace(/\)/g, "\\)");
 						
@@ -300,7 +289,7 @@ if (typeof CRA === "undefined"){
 				data: {
 					action: "edit",
 					title: CRA.pageData[pageKey].title,
-					summary: "Updating category " + CRA.oldName + " -> " + CRA.newName + " (automatic)",
+					summary: "Updating Category:" + CRA.oldName + " -> [[Category:" + CRA.newName + "]] (automatic)",
 					text: CRA.pageData[pageKey].content,
 					minor: true,
 					nocreate: true,
@@ -346,7 +335,7 @@ if (typeof CRA === "undefined"){
 				data: {
 					action: "delete",
 					title: "Category:" + CRA.oldName,
-					reason: CRA.reason,
+					reason: CRA.reason + "(automatic)",
 					token: mediaWiki.user.tokens.get("editToken"),
 					format: "json"
 				},
@@ -383,7 +372,7 @@ if (typeof CRA === "undefined"){
 				data: {
 					action: "edit",
 					title: "Category:" + CRA.oldName,
-					summary: "Redirecting to new category -> " + CRA.newName + " (automatic)",
+					summary: "Redirecting to new category -> [[Category:" + CRA.newName + "]] (automatic)",
 					text: "#REDIRECT [[:Category:" + CRA.newName + "]]",
 					minor: true,
 					nocreate: true,
