@@ -106,15 +106,17 @@ if (typeof CRA === "undefined"){
 			CRA.newName = document.getElementById("wpNewTitleMain").value,
 			CRA.reason = $("#wpReason").val();
 			CRA.pageKey = [];
+			CRA.pageData = [];
 			CRA.queueData = [];
-			CRA.oldCategoryContent;
+			CRA.requestCompleted = [];
+			CRA.oldCategoryContent = "";
  
 			/* Check if destination file name is in use */
 			$.getJSON("/api.php?action=query&prop=revisions&rvprop=content&titles=Category:" + encodeURIComponent(CRA.newName.replace(/ /g, "_")).replace(/"/g, "%22").replace(/'/g, "%27") + "&format=json", function(result){
 				if (typeof result.query.pages[-1] !== "undefined"){
 					CRA.updateStatus(true, "Getting category members");
 					/* If not, then get file usage for category */
-					$.getJSON("/api.php?action=query&list=categorymembers&cmtitle=Category:" + encodeURIComponent(CRA.oldName.replace(/ /g, "_")).replace(/"/g, "%22").replace(/'/g, "%27") + "&cmprop=title&cmlimit=5000", function(result){
+					$.getJSON("/api.php?action=query&list=categorymembers&cmtitle=Category:" + encodeURIComponent(CRA.oldName.replace(/ /g, "_")).replace(/"/g, "%22").replace(/'/g, "%27") + "&cmprop=title&cmlimit=5000&format=json", function(result){
 						var categoryUsage = result.query.categorymembers;
  
 						if (console) console.log("Category usage successfully retrieved");
@@ -135,23 +137,25 @@ if (typeof CRA === "undefined"){
 							
 							CRA.processPageContent(function(){
 								CRA.updateStatus(true, "Creating new page");
+								
 								CRA.createNewPage(function(){
 									CRA.updateStatus(true, "Begin submitting pages");
+									
 									if (console) console.log("Begin submitting pages");
 									
 									for (i=0; i<CRA.pageData.length; i++){
 										CRA.submitChangedPages(i, function(){
-											CRA.updateStatus(true, "Submitted page \"" + CRA.pageData[i].title + "\"");
+											
 											if (document.getElementById("CRADeleteRadio").checked == true){
 												CRA.deleteOldPage(function() {
-													CRA.updateStatus(false, "Rename complete");
+													CRA.updateStatus(false, 'Rename complete.  New category: <a href="/wiki/Category:' +  encodeURIComponent(CRA.newName.replace(/ /g, "_")).replace(/"/g, "%22").replace(/'/g, "%27") + '">' + CRA.newName + '</a>');
 												});
 											}else if (document.getElementById("CRARedirectRadio").checked == true){
 												CRA.redirectOldPage(function(){
-													CRA.updateStatus(false, "Rename complete");
+													CRA.updateStatus(false, 'Rename complete.  New category: <a href="/wiki/Category:' +  encodeURIComponent(CRA.newName.replace(/ /g, "_")).replace(/"/g, "%22").replace(/'/g, "%27") + '">' + CRA.newName + '</a>');
 												});
 											}else{
-												CRA.updateStatus(false, "Rename complete");
+												CRA.updateStatus(false, 'Rename complete.  New category: <a href="/wiki/Category:' +  encodeURIComponent(CRA.newName.replace(/ /g, "_")).replace(/"/g, "%22").replace(/'/g, "%27") + '">' + CRA.newName + '</a>');
 											}
 										});
 									}
@@ -160,7 +164,7 @@ if (typeof CRA === "undefined"){
 						}else{
 							/* Else, prompt to use normal renaming, since this is kind of pointless otherwise */
 							CRA.started = false;
-							CRA.updateStatus(false, "Category not added to any pages");
+							CRA.updateStatus(false, "Category not used on any pages, rename manually");
 						}
 					});
 				}else{
@@ -197,7 +201,7 @@ if (typeof CRA === "undefined"){
 					if (console) console.log("Created new category page \"" + CRA.newName + "\"");
 
 					if (typeof result.error !== "undefined"){
-						alert("The page \"" + CRA.pageData[pageKey].title + "\" could not be submitted because of error code:\"" + result.error.code + "\".");
+						alert("The page \"" + CRA.newName + "\" could not be submitted because of error code:\"" + result.error.code + "\".");
 						return false;
 					}
 					
@@ -226,7 +230,7 @@ if (typeof CRA === "undefined"){
 					action: "query",
 					prop: "revisions",
 					rvprop: "content",
-					titles: CRA.pageKey.join("|") + "|" + CRA.oldName,
+					titles: CRA.pageKey.join("|") + "|Category:" + CRA.oldName,
 					format: "json"
 				},
 				function(result){
@@ -234,7 +238,7 @@ if (typeof CRA === "undefined"){
 					for (var i in result.query.pages){
 						var keyNum = CRA.pageKey.indexOf(result.query.pages[i].title);
 						
-						if (result.query.pages[i].title == CRA.oldName){
+						if (result.query.pages[i].title == "Category:" + CRA.oldName){
 							CRA.oldCategoryContent = result.query.pages[i].revisions[0]["*"];
 						}else{
 							CRA.pageData[keyNum] = {
@@ -245,7 +249,6 @@ if (typeof CRA === "undefined"){
 					}
 					
 					if (console) console.log("Page contents retrieved and saved");
-					CRA.log("Page contents retrieved and saved");
 					
 					if (console) console.log("Begin processing page content.");
 					
@@ -319,6 +322,7 @@ if (typeof CRA === "undefined"){
 				success: function(result){
 					CRA.requestCompleted[pageKey] = true;
 					if (console) console.log("Posted page \""+CRA.pageKey[pageKey]+"\"");
+					CRA.updateStatus(true, "Submitted page \"" + CRA.pageData[pageKey].title + "\"");
 
 					if (typeof result.error !== "undefined"){
 						alert("The page \"" + CRA.pageData[pageKey].title + "\" could not be submitted because of error code:\"" + result.error.code + "\". Please update the link(s) on that page manually.");
@@ -334,14 +338,14 @@ if (typeof CRA === "undefined"){
 			});
 		},
 		
-		deleteOldPage(callback){
+		deleteOldPage: function(callback){
 			$.ajax({
 				url: "/api.php",
 				type: "POST",
 				async: true,
 				data: {
 					action: "delete",
-					title: CRA.oldName,
+					title: "Category:" + CRA.oldName,
 					reason: CRA.reason,
 					token: mediaWiki.user.tokens.get("editToken"),
 					format: "json"
@@ -359,7 +363,7 @@ if (typeof CRA === "undefined"){
 					if (console) console.log("Deleted category page \"" + CRA.newName + "\"");
 
 					if (typeof result.error !== "undefined"){
-						alert("The page \"" + CRA.pageData[pageKey].title + "\" could not be deleted because of error code:\"" + result.error.code + "\".  Please delete manually.");
+						alert("The page \"Category:" + CRA.oldName + "\" could not be deleted because of error code:\"" + result.error.code + "\".  Please delete manually.");
 					}
 					
 					/* Call callback if exists */
@@ -378,7 +382,7 @@ if (typeof CRA === "undefined"){
 				async: true,
 				data: {
 					action: "edit",
-					title: CRA.oldName,
+					title: "Category:" + CRA.oldName,
 					summary: "Redirecting to new category -> " + CRA.newName + " (automatic)",
 					text: "#REDIRECT [[:Category:" + CRA.newName + "]]",
 					minor: true,
@@ -408,7 +412,9 @@ if (typeof CRA === "undefined"){
 					}
 				}					
 			});
-		};
+		}
+	};
+}
 
 
 //</nowiki>
