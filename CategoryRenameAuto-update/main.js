@@ -47,12 +47,13 @@
 
 
 	if (mw.config.get('wgCanonicalSpecialPageName') === 'Blankpage' && $.getUrlVar('blankspecial') === 'categoryrename') {
+		var decodedOldCat = decodeURIComponent($.getUrlVar('categoryname').replace(/_/g, " ")).replace(/%22/g, '"').replace(/%27/g, "'");
 		var createCategoryRenameForm = function() {
-/* Text */		var form = 'Using the form below will rename a category, by changing the category names on pages that the category is used one. The old title will be deleted and moved to the new title. Be sure to check <a href="/wiki/Special:WantedCategories">wanted categories</a>. You are responsible for making sure that links continue to point where they are supposed to go.<br /><br />Note that the page will <strong>not</strong> be moved if there is already a page to the new title.<br /><br /><strong>Warning!</strong> This can be drastic and unexpected for a popular page; please be sure you understand the consequences of this before proceeding.<br />'
-/* Current name */		+ '<fieldset><legend>Rename category</legend><table border="0" id="mw-renamecategory-table"><tr><td class="mw-label">Current name:</td><td class="mw-input"><strong><a href="/wiki/Category:' + $.getUrlVar('categoryname') + '">Category:' + decodeURIComponent($.getUrlVar('categoryname').replace(/_/g, " ")).replace(/%22/g, '"').replace(/%27/g, "'") + '</a></strong></td></tr>'
-/* Rename category */		+ '<tr><td class="mw-label">Rename category:</td><td class="mw-input"><input name="wpNewTitleMain" size="79.5" value="Category:' + $.getUrlVar('categoryname') + '" type="text" id="wpNewTitleMain" maxlength="255"></td></tr>'
+/* Text */		var form = 'Using the form below will rename a category by changing the category names on pages that the category is used on. You can decide what to do with the old category pages, and a new category page will be created with the content from the old category. Be sure to check <a href="/wiki/Special:WantedCategories">wanted categories</a>. You are responsible for making sure that links continue to point where they are supposed to go.<br /><br />Note that the page will <strong>not</strong> be moved if there is already a page at the new title.<br /><br /><strong>Warning!</strong> This can be drastic and unexpected for a popular page; please be sure you understand the consequences of this before proceeding.<br />'
+/* Current name */		+ '<fieldset><legend>Rename category</legend><table border="0" id="mw-renamecategory-table"><tr><td class="mw-label">Current name:</td><td class="mw-input"><strong><a href="/wiki/Category:' + $.getUrlVar('categoryname') + '">Category:' + decodedOldCat + '</a></strong></td></tr>'
+/* Rename category */		+ '<tr><td class="mw-label">Rename category:</td><td class="mw-input">Category:<input name="wpNewTitleMain" size="79.5" value="' + decodedOldCat + '" type="text" id="wpNewTitleMain" maxlength="255"></td></tr>'
 /* Reason box */		+ '<tr><td class="mw-label">Reason:</td><td class="mw-input"><textarea name="wpReason" id="wpReason" cols="60" rows="2" maxlength="255"></textarea></td></tr>'
-/* Buttons and misc */		+ '<tr><td>&#160;</td><td class="mw-submit"><input type="radio" name="options" value="redirect">Leave a redirect behind<br /><input type="radio" name="options" value="delete">Delete the old category<br /><input type="radio" name="options" value="nothing">Do none of the above</input></td></tr><tr><td>&#160;</td><td class="mw-submit"><a style="margin-left: 0px;" class="wikia-button" onclick="LIR.start(&quot;single&quot;)">Rename</a><span id="liveLoader" style="display:none"><img src="http://slot1.images.wikia.nocookie.net/__cb62004/common/skins/common/progress-wheel.gif" /></span><span id="queueStatus" style="font-weight: bold"></span></td></tr>'
+/* Buttons and misc */		+ '<tr><td>&#160;</td><td class="mw-submit"><input type="radio" name="options" value="redirect" id="CRARedirectRadio">Leave a redirect behind<br /><input type="radio" name="options" value="delete" id="CRADeleteRadio">Delete the old category<br /><input type="radio" name="options" value="nothing" id="CRANothingRadio">Do none of the above</input></td></tr><tr><td>&#160;</td><td class="mw-submit"><a style="margin-left: 0px;" class="wikia-button" onclick="CRA.start()">Rename</a><span id="liveLoader" style="display:none"><img src="http://slot1.images.wikia.nocookie.net/__cb62004/common/skins/common/progress-wheel.gif" /></span><span id="CRAStatus" style="font-weight: bold"></span></td></tr>'
 /* Error box */			+ '<tr><td class="mw-label">Failed items:</td><td class="mw-input"><div id="LIRFailedLog" style="width: 798px; margin: 5px auto 0px auto; background-color: #ffbfbf; height: 150px; border: 1px solid black; font-weight: bold; overflow: scroll;">Failed items appear here after execution. Note that pages that the category is transcluded through a template on will also appear here falsely.</div></td></tr>';
 			$('#WikiaArticle').html(form);
 		}
@@ -70,7 +71,7 @@ if (typeof CRA === "undefined"){
 		started: false,
  
 		updateStatus: function(gifDisplay, message){
-			if ($("#queueStatus").length == 0) return false;
+			if ($("#CRAStatus").length == 0) return false;
  
 			if (typeof gifDisplay === "string"){
 				message = gifDisplay;
@@ -86,7 +87,7 @@ if (typeof CRA === "undefined"){
 			}
  
 			if (typeof message === "string"){
-				$("#queueStatus").html(" " + message);
+				$("#CRAStatus").html(" " + message);
 			}
 			return true;
 		},
@@ -98,10 +99,12 @@ if (typeof CRA === "undefined"){
 				return false;
 			}
 			
+			CRA.updateStatus(true, "Checking if new title exists");
+			
 			/* Sets variables used by the function */
 			CRA.oldName = decodeURIComponent($.getUrlVar('categoryname').replace(/_/g, " ")).replace(/%22/g, '"').replace(/%27/g, "'"),
-			CRA.newName = document.getElementById("wpNewTitleMain").value, /////////////////////////TBD, need to procure the name from the rename page that you're making
-			reason = $("#wpReason").val(); /////////////////////////TBD, need to procure the reason from the rename page that you're making
+			CRA.newName = document.getElementById("wpNewTitleMain").value,
+			CRA.reason = $("#wpReason").val();
 			CRA.pageKey = [];
 			CRA.queueData = [];
 			CRA.oldCategoryContent;
@@ -109,6 +112,7 @@ if (typeof CRA === "undefined"){
 			/* Check if destination file name is in use */
 			$.getJSON("/api.php?action=query&prop=revisions&rvprop=content&titles=Category:" + encodeURIComponent(CRA.newName.replace(/ /g, "_")).replace(/"/g, "%22").replace(/'/g, "%27") + "&format=json", function(result){
 				if (typeof result.query.pages[-1] !== "undefined"){
+					CRA.updateStatus(true, "Getting category members");
 					/* If not, then get file usage for category */
 					$.getJSON("/api.php?action=query&list=categorymembers&cmtitle=Category:" + encodeURIComponent(CRA.oldName.replace(/ /g, "_")).replace(/"/g, "%22").replace(/'/g, "%27") + "&cmprop=title&cmlimit=5000", function(result){
 						var categoryUsage = result.query.categorymembers;
@@ -127,23 +131,27 @@ if (typeof CRA === "undefined"){
 							
 							/* Processing page content first to not have to send a separate API request
 								to retrieve old category contents */
+							CRA.updateStatus(true, "Fetching page contents from API");
 							
 							CRA.processPageContent(function(){
+								CRA.updateStatus(true, "Creating new page");
 								CRA.createNewPage(function(){
+									CRA.updateStatus(true, "Begin submitting pages");
 									if (console) console.log("Begin submitting pages");
 									
 									for (i=0; i<CRA.pageData.length; i++){
 										CRA.submitChangedPages(i, function(){
-											if (radialCondition == true){
+											CRA.updateStatus(true, "Submitted page \"" + CRA.pageData[i].title + "\"");
+											if (document.getElementById("CRADeleteRadio").checked == true){
 												CRA.deleteOldPage(function() {
-													alert("Action completed");
+													CRA.updateStatus(false, "Rename complete");
 												});
-											}else if (radialCondition == true){
+											}else if (document.getElementById("CRARedirectRadio").checked == true){
 												CRA.redirectOldPage(function(){
-													alert("Action completed");
+													CRA.updateStatus(false, "Rename complete");
 												});
 											}else{
-												alert("Action completed");
+												CRA.updateStatus(false, "Rename complete");
 											}
 										});
 									}
@@ -171,7 +179,7 @@ if (typeof CRA === "undefined"){
 				data: {
 					action: "edit",
 					title: "Category:" + CRA.newName,
-					summary: "REASON", /////////////////////TBD, get summary from move page
+					summary: CRA.reason,
 					text: CRA.oldCategoryContent,
 					minor: true,
 					recreate: true,
@@ -334,7 +342,7 @@ if (typeof CRA === "undefined"){
 				data: {
 					action: "delete",
 					title: CRA.oldName,
-					reason: "REASON", /////////////////////TBD, use same reason from rename page
+					reason: CRA.reason,
 					token: mediaWiki.user.tokens.get("editToken"),
 					format: "json"
 				},
