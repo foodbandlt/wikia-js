@@ -134,10 +134,17 @@ if (typeof CRA === "undefined"){
 									
 									for (i=0; i<CRA.pageData.length; i++){
 										CRA.submitChangedPages(i, function(){
-											CRA.deletePage(function() {
+											if (radialCondition == true){
+												CRA.deleteOldPage(function() {
+													alert("Action completed");
+												});
+											}else if (radialCondition == true){
+												CRA.redirectOldPage(function(){
+													alert("Action completed");
+												});
+											}else{
 												alert("Action completed");
-												location.href = "/wiki/Category:" + encodeURIComponent(newCategoryName.replace(/ /g, "_")).replace(/"/g, "%22").replace(/'/g, "%27");
-											});
+											}
 										});
 									}
 								})
@@ -319,7 +326,7 @@ if (typeof CRA === "undefined"){
 			});
 		},
 		
-		deletePage(callback){
+		deleteOldPage(callback){
 			$.ajax({
 				url: "/api.php",
 				type: "POST",
@@ -345,6 +352,46 @@ if (typeof CRA === "undefined"){
 
 					if (typeof result.error !== "undefined"){
 						alert("The page \"" + CRA.pageData[pageKey].title + "\" could not be deleted because of error code:\"" + result.error.code + "\".  Please delete manually.");
+					}
+					
+					/* Call callback if exists */
+					if (typeof(callback) === "function"){
+						callback();
+					}
+				}					
+			});
+		},
+		
+		redirectOldPage: function(pageKey, callback) {
+			
+			$.ajax({
+				url: "/api.php",
+				type: "POST",
+				async: true,
+				data: {
+					action: "edit",
+					title: CRA.oldName,
+					summary: "Redirecting to new category -> " + CRA.newName + " (automatic)",
+					text: "#REDIRECT [[:Category:" + CRA.newName + "]]",
+					minor: true,
+					nocreate: true,
+					redirect: false,
+					bot: true,
+					token: mediaWiki.user.tokens.get("editToken"),
+					format: "json"
+				},
+				contentType: "application/x-www-form-urlencoded",
+				error: function(){
+					alert("Unable to publish page \"" + CRA.oldName + "\".  Please update that page manually.");
+					if (typeof(callback) === "function"){
+						callback();
+					}
+				},
+				success: function(result){
+					if (console) console.log("Posted page \"" + CRA.oldName + "\"");
+
+					if (typeof result.error !== "undefined"){
+						alert("The page \"" + CRA.pageData[pageKey].title + "\" could not be submitted because of error code:\"" + result.error.code + "\". Please update the link(s) on that page manually.");
 					}
 					
 					/* Call callback if exists */
