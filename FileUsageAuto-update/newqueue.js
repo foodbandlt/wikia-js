@@ -1,4 +1,4 @@
-var buttonappend = '<a class="wikia-button addtoqueue" onclick="addtoqueue(oldName, newName, 'multi')">'Add to queue '</a>'
+var buttonappend = "<a class='wikia-button addtoqueue' onclick='addtoqueue(oldName, newName, 'multi')'">'Add to queue'</a>'
 
 if (document.getElementsByClassName("oldName") || document.getElementsByClassName("newName")) {
     fuanmodal()
