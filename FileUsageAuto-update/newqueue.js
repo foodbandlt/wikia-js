@@ -1,10 +1,10 @@
 var buttonappend = "<a class='wikia-button addtoqueue' onclick='addtoqueue(oldName, newName, 'multi')'">'Add to queue'</a>'
 
 if (document.getElementsByClassName("oldName") || document.getElementsByClassName("newName")) {
-    fuanmodal()
+    fuauModal()
 }
 
-function fuaumodal() {
+function fuauModal() {
     $.showCustomModal("Queue addition", '<form class="WikiaForm" method="" name=""><fieldset><strong>Old file name: </strong><br /><input type="text" id="oldName-enter" placeholder="File:TSAtBarnS3 E5.png" style="width: 500px"></input><br /><strong>New file name: </strong><br /><input type="text" id="newName-enter" placeholder="File:Twilight Sparkle at the barn S3E5.png" style="width: 500px;"></input></feildset></form>', {
         id: "fuau",
         width: 650,
