@@ -21,5 +21,12 @@ function fuauModal() {
     }
 }
 
-function addtoqueue()
-// oldName - newName for the button and the modal
+// NEED TO CHECK IF FILE NAME EXISTS ETC!!!
+
+function addtoqueue() {
+    var oldName = document.getElementsByClassName("oldName").val(),
+        newName = document.getElementsByClassName("newName").val(),
+        reason = text("Using the queue button").val(); //Make a specific reason for this
+    LIR.pageKey = [];
+processQueue()
+}
