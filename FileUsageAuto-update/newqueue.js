@@ -26,7 +26,7 @@ function fuauModal() {
 function addtoqueue() {
     var oldImageName = document.getElementsByClassName("oldName").val(),
         newImageName = document.getElementsByClassName("newName").val(),
-        reason = text.("Using the queue button").val(); //Make a specific reason for this
+        reason = "Using the queue button"; //Not sure if this is right
     LIR.pageKey = [];
 processQueue()
 }
