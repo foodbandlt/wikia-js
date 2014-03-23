@@ -137,7 +137,7 @@ if (typeof LIR === "undefined"){
 			
 			/* Checks if old or new file name is currently part of the queue */
 			for (i=0; i<LIR.queueData.length; i++){
-				if (LIR.queueData[i].newImage == oldImageName || LIR.queueData[i].newImage == newImageName || LIR.queueData[i].oldImage == oldImageName){
+				if (LIR.queueData[i].newImage == oldImageName || LIR.queueData[i].newImage == newImageName || LIR.queueData[i].oldImage == oldImageName || LIR.queueData[i].oldImage == newImageName){
 					LIR.started = false;
 					if (typeof LIR.queuePosition !== "undefined"){
 						localStorage.LIRQueuedUpdatesPos++;
@@ -181,10 +181,26 @@ if (typeof LIR === "undefined"){
 							
 								/* Resets queue-related variables if only renaming and replacing a single image */
 								if (LIR.type == "single"){
+									
 									LIR.queueData = [];
+									LIR.queueDataList = [];
 									LIR.pageKey = [];
+									
+									for (var currentPage = 0; currentPage < imageUsage.length; currentPage++){
+										var title = imageUsage[currentPage].title;
+										/* Temporary until Wikia fixes issue with editing blog comments through the API */
+										if (title.search(/User blog comment/i) != -1){
+											LIRBlogComment = true;
+										}
+									}
+									
+									LIR.queueDataList[LIR.queueData.length] = {
+										oldImage: oldImageName,
+										newImage: newImageName,
+										reason: reason
+									};
 													
-									/* Adds pages image is used on to window.LIR.pageKey to help keep track of pages in window.LIR.pageData later on */
+									/* Adds pages image is used on to window.LIR.pageKey to help keep track of pages in window.LIR.pageData later on 
 									for (var currentPage = 0; currentPage < totalImageUsage.length; currentPage++){
 										var title = totalImageUsage[currentPage].title;
 
@@ -192,7 +208,7 @@ if (typeof LIR === "undefined"){
 											LIR.pageKey[LIR.pageKey.length] = title;
 										}
 										
-										/* Temporary until Wikia fixes issue with editing blog comments through the API */
+										/* Temporary until Wikia fixes issue with editing blog comments through the API 
 										if (title.search(/User blog comment/i) == -1){
 											for (i = 0; i <= LIR.queueData.length; i++){
 												if (i == LIR.queueData.length){
@@ -211,6 +227,7 @@ if (typeof LIR === "undefined"){
 											LIRBlogComment = true;
 										}
 									}
+									*/
 								}else{
 									LIR.queueData[LIR.queueData.length] = {
 										oldImage: oldImageName,
@@ -241,7 +258,7 @@ if (typeof LIR === "undefined"){
 											updating, it requires LIR.started to be false to start */
 										LIR.started = false;
 										LIR.processQueue(function(){
-											$("#movepage").submit();
+											window.location = "/wiki/File:" + encodeURIComponent(newImageName.replace(/ /g, "_")).replace(/"/g, "%22").replace(/'/g, "%27");
 										});
 									}
 								}else{
@@ -294,10 +311,10 @@ if (typeof LIR === "undefined"){
 				var namespaceSelection = "";
 			}
 		
-			$.getJSON("/api.php?action=query&list=imageusage&iutitle=File:"+encodeURIComponent(LIR.queueDataList[index].oldImage.replace(/ /g, "_")).replace(/"/g, "%22").replace(/'/g, "%27")+"&iulimit=500&format=json", function(result){
+			$.getJSON("/api.php?action=query&list=imageusage&iutitle=File:"+encodeURIComponent(LIR.queueDataList[index].oldImage.replace(/ /g, "_")).replace(/"/g, "%22").replace(/'/g, "%27")+"&iulimit=5000&format=json", function(result){
 				var imageUsage = result.query.imageusage;
 				
-				$.getJSON("/api.php?action=query" + namespaceSelection + "&bllimit=500&list=backlinks&bltitle=File:" + encodeURIComponent(LIR.queueDataList[index].oldImage.replace(/ /g, "_")).replace(/"/g, "%22").replace(/'/g, "%27") + "&format=json", function(result){
+				$.getJSON("/api.php?action=query" + namespaceSelection + "&bllimit=5000&list=backlinks&bltitle=File:" + encodeURIComponent(LIR.queueDataList[index].oldImage.replace(/ /g, "_")).replace(/"/g, "%22").replace(/'/g, "%27") + "&format=json", function(result){
 					var imageLinks = result.query.backlinks;
 					var totalImageUsage = imageUsage.concat(imageLinks);
 					
@@ -358,10 +375,13 @@ if (typeof LIR === "undefined"){
 			LIR.pageData = [];
 			
 			/* Queue retrieval, returns false if no queue */
-			if (LIR.type == "multi" && localStorage.LIRQueuedUpdates == 0){
-				if (typeof (localStorage[wgUserName + "_LIRQueueData"]) !== "undefined"){
-					LIR.queueDataList = JSON.parse(localStorage[wgUserName + "_LIRQueueData"]);
-					if (console) console.log("Queue retrieved successfully.");
+			if ( (LIR.type == "multi" && localStorage.LIRQueuedUpdates == 0) || LIR.type == "single"){
+				if (typeof (localStorage[wgUserName + "_LIRQueueData"]) !== "undefined" || LIR.type == "single"){
+					if (LIR.type == "multi"){
+						LIR.queueDataList = JSON.parse(localStorage[wgUserName + "_LIRQueueData"]);
+						if (console) console.log("Queue retrieved successfully.");
+					}
+					
 					LIR.usageRequested = 0;
 					LIR.usageProgress = 0;
 					LIR.moveRequested = LIR.queueDataList.length;
@@ -412,86 +432,126 @@ if (typeof LIR === "undefined"){
 			for (i = 0; i<LIR.pageKey.length; i++){
 				LIR.requestCompleted[i] = false;
 			}
+			var pageDataRetrieved = 0;
 
 			if (console) console.log("Getting page contents");
 			
+			
+			for (var j = 0; j < (Math.floor(LIR.pageKey.length/500)+1); j++){
+				var tempArray = [];
+				
+				for (var k = (j * 500); k < (j * 500) + 500; k++){
+					if (k == LIR.pageKey.length){
+						break;
+					}
+					
+					tempArray.push( LIR.pageKey[k] );
+				}
+			
+			
+			
+			
 			/* Calls API for page contents */
-			$.post(
-				"/api.php",
-				{
-					action: "query",
-					prop: "revisions",
-					rvprop: "content",
-					titles: LIR.pageKey.join("|"),
-					format: "json"
-				},
-				function(result){
-					/* Saves page contents for each page in LIR.pageData */
-					for (var i in result.query.pages){
-						var keyNum = LIR.pageKey.indexOf(result.query.pages[i].title);
-						LIR.pageData[keyNum] = {
-							title: LIR.pageKey[keyNum],
-							content: result.query.pages[i].revisions[0]["*"],
-							changed: false
-						};
-					}
-					
-					if (console) console.log("Page contents retrieved and saved");
-					LIR.log("Page contents retrieved and saved");
-					
-					if (console) console.log("Begin processing page content.");
-					
-					/* Replacing image name on each page */
-					for (i=0; i<LIR.queueData.length; i++){
-						var pageKey = LIR.pageKey.indexOf(LIR.queueData[i].title);
-						var escapedName0 = window.LIR.queueData[i].oldImage.replace(/\*/g, "\\*").replace(/\?/g, "\\?").replace(/\./g, "\\.").replace(/ /g, "[ _]*?").replace(/\(/g, "\\(").replace(/\)/g, "\\)");
-						
-						if ( escapedName0.substr(0,1).match(/[A-z]/i) ){
-							var escapedName = "[" + escapedName0.substr(0,1).toUpperCase() + escapedName0.substr(0,1).toLowerCase() + "]" + escapedName0.substr(1);
-						}else{
-							var escapedName = escapedName0;
+				$.post(
+					"/api.php",
+					{
+						action: "query",
+						prop: "revisions",
+						rvprop: "content",
+						titles: tempArray.join("|"),
+						format: "json"
+					},
+					function(result){
+						/* Saves page contents for each page in LIR.pageData */
+						for (var i in result.query.pages){
+							var keyNum = LIR.pageKey.indexOf(result.query.pages[i].title);
+							LIR.pageData[keyNum] = {
+								title: LIR.pageKey[keyNum],
+								content: result.query.pages[i].revisions[0]["*"],
+								changed: false
+							};
+							pageDataRetrieved++;
 						}
 						
-						var pageReplacement = new RegExp("(\\n[ ]*?|:?File:[ ]*?|:?Image:[ ]*?|=[ ]*?|\\|)" + escapedName + "([ ]*?\\n|[ ]*?\\||\\]|\\})", "g");
-						var replacementReg = new RegExp(escapedName, "g");
-						
-						if (LIR.pageData[pageKey].content.search(pageReplacement) != -1){
-							LIR.pageData[pageKey].changed = true;
-							if (console) console.log("\""+LIR.queueData[i].oldImage+"\" replaced on page \""+LIR.queueData[i].title+"\"");
+						if (pageDataRetrieved == LIR.pageKey.length){
+							if (console) console.log("Page contents retrieved and saved");
+							LIR.log("Page contents retrieved and saved");
 							
-							while ((regExec = pageReplacement.exec(LIR.pageData[pageKey].content)) != null){
-								LIR.pageData[pageKey].content = LIR.pageData[pageKey].content.replace(regExec[0], regExec[0].replace(replacementReg, LIR.queueData[i].newImage));
-								pageReplacement.lastIndex += (regExec[0].replace(replacementReg, LIR.queueData[i].newImage).length - regExec[0].length) - (regExec[2].length);
+							if (console) console.log("Begin processing page content.");
+							
+							/* Replacing image name on each page */
+							for (i=0; i<LIR.queueData.length; i++){
+								var pageKey = LIR.pageKey.indexOf(LIR.queueData[i].title);
+								var escapedName0 = window.LIR.queueData[i].oldImage.replace(/\*/g, "\\*").replace(/\?/g, "\\?").replace(/\./g, "\\.").replace(/ /g, "[ _]*?").replace(/\(/g, "\\(").replace(/\)/g, "\\)").replace(/\+/g, "\\+");
+								
+								if ( escapedName0.substr(0,1).match(/[A-z]/i) ){
+									var escapedName = "[" + escapedName0.substr(0,1).toUpperCase() + escapedName0.substr(0,1).toLowerCase() + "]" + escapedName0.substr(1);
+								}else{
+									var escapedName = escapedName0;
+								}
+								
+								var pageReplacement = new RegExp("(\\n[ ]*?|:?File:[ ]*?|:?Image:[ ]*?|:?Video:[ ]*?|=[ ]*?|\\|)" + escapedName + "(.*?\\n|[ ]*?\\||\\]|\\}|\\{|\\[)", "g");
+								var replacementReg = new RegExp(escapedName, "g");
+								
+								if (LIR.pageData[pageKey].content.search(pageReplacement) != -1){
+									LIR.pageData[pageKey].changed = true;
+									if (console) console.log("\""+LIR.queueData[i].oldImage+"\" replaced on page \""+LIR.queueData[i].title+"\"");
+									
+									while ((regExec = pageReplacement.exec(LIR.pageData[pageKey].content)) != null){
+										LIR.pageData[pageKey].content = LIR.pageData[pageKey].content.replace(regExec[0], regExec[0].replace(replacementReg, LIR.queueData[i].newImage));
+										pageReplacement.lastIndex += (regExec[0].replace(replacementReg, LIR.queueData[i].newImage).length - regExec[0].length) - (regExec[2].length);
+									}
+								}else{
+									if (LIR.type == "multi"){
+										LIR.failedLog(LIR.queueData[i].oldImage, LIR.queueData[i].newImage, LIR.queueData[i].title);
+									}else{
+										alert("Unable to find \""+LIR.queueData[i].oldImage+"\" on page \""+LIR.queueData[i].title+"\"; it may be transcluded through a template. Please check and rename manually if needed.");
+									}
+								}
 							}
-						}else{
+							
+							LIR.log("Submitting page content");
+							if (console) console.log("Begin submitting pages");
+							
+							/* Adds progress bar for page submission (since this is the longest part and something entertaining needs to happen) */
 							if (LIR.type == "multi"){
-								LIR.failedLog(LIR.queueData[i].oldImage, LIR.queueData[i].newImage, LIR.queueData[i].title);
+								$(".modalToolbar").prepend("<div id='LIRQueueProgress' style='float: left; width: 200px; border: 2px solid black; height: 17px;'><div id='LIRProgressInd' style='width: 0%; height: 100%; float: left; background-color: green;'></div></div>");
+								LIR.queueProgress = 0;
+							}
+							
+							var l = 0;
+							
+							var throttle = setInterval(function(){
+								if (LIR.pageData[l].changed == true){
+									LIR.submitChangedPages(l, callback);
+								}else{
+									LIR.requestCompleted[l] = true;
+								}
+								
+								l++;
+								
+								if (l == LIR.pageData.length){
+									clearInterval(throttle);
+								}
+							}, 500);
+						}else if (k == LIR.pageKey.length && pageDataRetrieved != LIR.pageKey.length){
+							if(console) console.log("There was a problem retrieving one or more pages. Retrieved " + LIR.pageData.length + " of " + LIR.pageKey.length + " pages");  
+						}
+						
+						/* Submits edited pages
+						
+						for (var i=0; i<LIR.pageData.length; i++){
+							if (LIR.pageData[i].changed == true){
+								LIR.submitChangedPages(i, callback);
 							}else{
-								alert("Unable to find \""+LIR.queueData[i].oldImage+"\" on page \""+LIR.queueData[i].title+"\"; it may be transcluded through a template. Please check and rename manually if needed.");
+								LIR.requestCompleted[i] = true;
 							}
 						}
-					}
-					
-					LIR.log("Submitting page content");
-					if (console) console.log("Begin submitting pages");
-					
-					/* Adds progress bar for page submission (since this is the longest part and something entertaining needs to happen) */
-					if (LIR.type == "multi"){
-						$(".modalToolbar").prepend("<div id='LIRQueueProgress' style='float: left; width: 200px; border: 2px solid black; height: 17px;'><div id='LIRProgressInd' style='width: 0%; height: 100%; float: left; background-color: green;'></div></div>");
-						LIR.queueProgress = 0;
-					}
-					
-					/* Submits edited pages */
-					for (i=0; i<LIR.pageData.length; i++){
-						if (LIR.pageData[i].changed == true){
-							LIR.submitChangedPages(i, callback);
-						}else{
-							LIR.requestCompleted[i] = true;
-						}
-					}
-				},
-				"json"
-			);
+						*/
+					},
+					"json"
+				);
+			}
 		},
 		
 		submitChangedPages: function(pageKey, callback) {
@@ -787,6 +847,8 @@ if (typeof LIR === "undefined"){
 		if (LIRoptions.bottomMessage != ""){
 			LIR.appendButtonText += ('<br /><div style="font-weight: bold; width: 850px; white-space: normal;">' + LIRoptions.bottomMessage + '</div>');
 		}
+		
+		LIR.appendButtonText += ('<br /><div style="font-weight: bold; width: 850px; white-space: normal;">Script Updated 23rd of March, 2014</div>');
 		
 		$('td.mw-submit').append(LIR.appendButtonText);
 		$('#mw-movepage-table tr:eq(4)').after('<tr><td></td><td class="mw-input"><label><input type="checkbox" id="LIRNamespaceToggleCheck" onchange="LIR.updateNamespaceSelection()" ' + localStorage[wgUserName + "_LIRNamespaceSelection"] + '>&nbsp;Include <span style="font-weight: bold">links</span> in all namespaces eg: [[:File:File.png]] <span style="font-size: 9px;">(only includes Main by default) only affects ' + LIRoptions.singleButtonText + ' option</span></label></td></tr>');
