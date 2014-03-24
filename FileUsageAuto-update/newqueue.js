@@ -5,6 +5,7 @@ LIR.addToQueueButton = function(buttonId) {
     console.log( decodeURIComponent( $("#" + buttonId).attr("data-fuau-to") ) );
     console.log("Using the queue button"); //Not sure if this is right
 }
+
 var buttonIndex = 0;
 $(".fuau").each(function(){
 	$(this).html("<a class='wikia-button' id='fuau-button-" + buttonIndex + "' data-fuau-from='" + $(this).attr('data-fuau-from') + "' data-fuau-to='" + $(this).attr('data-fuau-to') + "' onclick='LIR.addToQueueButton(\"fuau-button-" + buttonIndex++ + "\")'>Add to queue</a>");
