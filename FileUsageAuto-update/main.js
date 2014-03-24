@@ -58,8 +58,16 @@ if (typeof LIR === "undefined"){
 	LIR = {
 		started: false,
 		
-		updateStatus: function(gifDisplay, message){
+		updateStatus: function(gifDisplay, message, loaderId){
 			if ($("#queueStatus").length == 0) return false;
+			
+			if (typeof loaderId != "undefined"){
+				loaderIdString = "liveLoader-" + loaderId";
+				queueStatusString = "queueStatus-" + loaderIdString";
+			}else{
+				loaderIdString = "liveLoader";
+				queueStatusString = "queueStatus"
+			}
 		
 			if (typeof gifDisplay === "string"){
 				message = gifDisplay;
@@ -69,18 +77,18 @@ if (typeof LIR === "undefined"){
 				}else{
 					displayValue = "inline-block";
 				}
-				document.getElementById("liveLoader").style.display = displayValue;
+				document.getElementById(loaderIdString).style.display = displayValue;
 			}else{
 				return false;
 			}
 			
 			if (typeof message === "string"){
-				$("#queueStatus").html(" " + message);
+				$("#" + queueStatusString).html(" " + message);
 			}
 			return true;
 		},
 		
-		start: function(type){
+		start: function(type, oldName, newName, reason, loaderId){
 			if (!Storage){
 				return false;
 			}
@@ -105,8 +113,8 @@ if (typeof LIR === "undefined"){
 					}
 					
 					if (LIR.queuePosition != localStorage.LIRQueuedUpdatesPos){
-						LIR.updateStatus("Number " + (LIR.queuePosition - localStorage.LIRQueuedUpdatesPos) + " on wait list to add to queue");
-						setTimeout(function(){LIR.start(type);}, 500);
+						LIR.updateStatus("Number " + (LIR.queuePosition - localStorage.LIRQueuedUpdatesPos) + " on wait list");
+						setTimeout(function(){LIR.start(type, oldName, newName, reason);}, 500);
 						return false;
 					}
 					
@@ -130,9 +138,15 @@ if (typeof LIR === "undefined"){
 			}
 
 			/* Sets variables used by the function */
-			var oldImageName = $('input[name="wpOldTitle"]').val().slice(5),
-				newImageName = document.getElementById("wpNewTitleMain").value,
-				reason = $("#wpReason").val();
+			if (typeof oldName != "undefined" && typeof newName != "undefined"){
+				var oldImageName = oldName,
+					newImageName = newName,
+					if (typeof reason == "undefined") reason = "";
+			}else{
+				var oldImageName = $('input[name="wpOldTitle"]').val().slice(5),
+					newImageName = document.getElementById("wpNewTitleMain").value,
+					reason = $("#wpReason").val();
+			}
 			LIR.pageKey = [];
 			
 			/* Checks if old or new file name is currently part of the queue */
@@ -482,7 +496,7 @@ if (typeof LIR === "undefined"){
 							/* Replacing image name on each page */
 							for (i=0; i<LIR.queueData.length; i++){
 								var pageKey = LIR.pageKey.indexOf(LIR.queueData[i].title);
-								var escapedName0 = window.LIR.queueData[i].oldImage.replace(/\*/g, "\\*").replace(/\?/g, "\\?").replace(/\./g, "\\.").replace(/ /g, "[ _]*?").replace(/\(/g, "\\(").replace(/\)/g, "\\)").replace(/\+/g, "\\+");
+								var escapedName0 = window.LIR.queueData[i].oldImage.replace(/\*/g, "\\*").replace(/\?/g, "\\?").replace(/\./g, "\\.").replace(/( |_)/g, "[ _]*?").replace(/\(/g, "\\(").replace(/\)/g, "\\)").replace(/\+/g, "\\+");
 								
 								if ( escapedName0.substr(0,1).match(/[A-z]/i) ){
 									var escapedName = "[" + escapedName0.substr(0,1).toUpperCase() + escapedName0.substr(0,1).toLowerCase() + "]" + escapedName0.substr(1);
@@ -775,7 +789,7 @@ if (typeof LIR === "undefined"){
 				"Image link updating queue", 
 				'<div id="LIRContainer" style="width: 100%;"> <div id="LIRQueue" style="overflow: scroll; width: 590px; height: 300px; float: left; border: 1px solid black; font-weight: bold; background-color: #FFFFFF;"></div> <div id="LIRLog" style="overflow-x: scroll; height: 300px; width: 200px; float: right; background-color: lightgrey; border: 1px solid black;"></div> <div id="LIRQueueLength" style="float: left;margin: 5px 15px 0px 0px; font-weight: bold;">Files in queue: <span id="LIRQueueLengthBox"></span></div> <div id="LIRNamespaceToggle" style="float: left; margin: 5px 5px 0px 0px;"><label><input type="checkbox" id="LIRNamespaceToggleCheck" onchange="LIR.updateNamespaceSelection()" ' + localStorage[wgUserName + "_LIRNamespaceSelection"] + '>Include <span style="font-weight: bold">links</span> in all namespaces eg: [[:File:File.png]] <span style="font-size: 9px;">(only includes Main by default)</span></label></div> <div style="clear: both"></div> <div id="LIRFailedLog" style="width: 798px; margin: 5px auto 0px auto; background-color: #ffbfbf; height: 150px; border: 1px solid black; font-weight: bold; overflow: scroll;">Failed items appear here after execution. Note that pages that the file is transcluded through a template on will also appear here falsely.</div> </div>', 
 				{
-					id: "optionsWindow",
+					id: "queueModal",
 					width: 800,
 					buttons: [
 						{
@@ -824,7 +838,7 @@ if (typeof LIR === "undefined"){
 						$(".blackout, .close").off("click").click(function(){
 							if ((LIR.started == false || typeof(LIR.started) === "undefined")){
 								delete LIRCurrentQueueData;
-								$("#optionsWindow").remove();
+								$("#queueModal").remove();
 								$(".blackout").fadeOut(function(){
 									$(this).remove();
 								});
