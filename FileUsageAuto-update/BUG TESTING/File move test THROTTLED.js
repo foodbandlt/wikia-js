@@ -63,7 +63,7 @@ function moveFile(arrayOne, arrayTwo, index, callback){
 }
 
 /*****************************
-Swap param 1 and 2 as needed
+Swap param 1 and 2 as needed after each test.
 
 moveFile(array1, array2, 0, function(arrayOne, arrayTwo, index, callback){
 	moveFile(arrayOne, arrayTwo, index, callback);
