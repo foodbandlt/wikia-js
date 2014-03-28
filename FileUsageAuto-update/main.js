@@ -702,19 +702,15 @@ if (/*typeof LIR === "undefined"*/ true){
 		removeFromQueue: function(queueOldName){
 			LIR.queueData = JSON.parse(localStorage[wgUserName + "_LIRQueueData"]);
 
-			for (var i in LIR.queueData){
-				if (LIR.queueData[i].oldImage == queueOldName){
-					LIR.queueData.splice(i, 1);
+			LIR.queueData.splice(queueOldName, 1);
 
-					if (LIR.queueData.length > 0){
-						LIR.storeQueue(function(){
-							$("#LIRNotification").slideUp("fast", function(){this.remove();});
-						});
-					}else{
-						delete localStorage[wgUserName + "_LIRQueueData"];
-						$("#LIRNotification").slideUp("fast", function(){this.remove();});
-					}
-				}
+			if (LIR.queueData.length > 0){
+				LIR.storeQueue(function(){
+					$("#LIRNotification").slideUp("fast", function(){this.remove();});
+				});
+			}else{
+				delete localStorage[wgUserName + "_LIRQueueData"];
+				$("#LIRNotification").slideUp("fast", function(){this.remove();});
 			}
 		},
 
@@ -923,7 +919,7 @@ if (wgPageName.indexOf("Special:MovePage/File:") != -1 && Storage){
 	
 		for (var i in LIR.instances[0].queueData){
 			if (wgTitle.match(new RegExp(LIR.instances[0].queueData[i].oldImage.replace(/\*/g, "\\*").replace(/\?/g, "\\?").replace(/\./g, "\\.").replace(/( |_)/g, "[ _]*?").replace(/\(/g, "\\(").replace(/\)/g, "\\)").replace(/\+/g, "\\+"), "gi") ) != null){
-				$("#WikiaPageHeader").after('<div style="position: relative; width: 80%; margin: 0px auto 10px auto; padding-bottom: 10px; border: 2px solid lightgreen; background-color: white;" id="LIRNotification"><img src="http://upload.wikimedia.org/wikipedia/commons/b/bd/Checkmark_green.svg" style="height: 40px; float:left; margin: 5px 20px;" /><span style="float: left; word-wrap:break-word; margin-top: 10px; font-size: 14px; padding-bottom: 10px;">This image is currently in your queue to be renamed!<br>New name: <span style="font-weight: bold;">'+LIR.instances[0].queueData[i].newImage+'</span></span><div style="position: absolute; bottom: 2px; right: 2px;"><a onclick="LIR.removeFromQueue(\'' + LIR.instances[0].queueData[i].oldImage.replace(/'/g, "\\'") + '\')" style="cursor: pointer">Remove from queue</a></div><div style="clear:both;"></div></div>');
+				$("#WikiaPageHeader").after('<div style="position: relative; width: 80%; margin: 0px auto 10px auto; padding-bottom: 10px; border: 2px solid lightgreen; background-color: white;" id="LIRNotification"><img src="http://upload.wikimedia.org/wikipedia/commons/b/bd/Checkmark_green.svg" style="height: 40px; float:left; margin: 5px 20px;" /><span style="float: left; word-wrap:break-word; margin-top: 10px; font-size: 14px; padding-bottom: 10px;">This image is currently in your queue to be renamed!<br>New name: <span style="font-weight: bold;">'+LIR.instances[0].queueData[i].newImage+'</span></span><div style="position: absolute; bottom: 2px; right: 2px;"><a onclick="LIR.removeFromQueue(' + i + ')" style="cursor: pointer">Remove from queue</a></div><div style="clear:both;"></div></div>');
 				break;
 			}
 		}
