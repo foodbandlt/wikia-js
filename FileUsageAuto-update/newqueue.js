@@ -18,7 +18,7 @@ if (document.getElementsByClassName("oldName") || document.getElementsByClassNam
 function fuauModal() {
     $.showCustomModal(
 		"Queue addition",
-		'<fieldset><strong>Old file name: </strong><br /><input type="text" id="oldName" placeholder="File:TSAtBarnS3 E5.png" style="width: 500px"></input><br /><strong>New file name: </strong><br /><input type="text" id="newName" placeholder="File:Twilight Sparkle at the barn S3E5.png" style="width: 500px;"></input></feildset>',
+		'<form class="WikiaForm" method="" name="" id="fuau"><fieldset><span style="font-weight:bold">Old file name:</span><br><input id="################################################" type="text" placeholder="File:TSAtBarnS3 E5.png" style="width:400px"/><br><span id="br2" /><span style="font-weight:bold">New file name:</span><br><input id="################################################" type="text" placeholder="File:Twilight Sparkle at the barn S3E5.png" style="width:400px"/><br><span id="br2" /></fieldset>',
 		{
 			id: "fuauModal",
 			width: 650,
