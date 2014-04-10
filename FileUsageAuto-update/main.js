@@ -6,7 +6,7 @@
 * Updates file links in use on the wiki when image is renamed.
 *
 * @Author Foodbandlt
-*
+* Last updated 10th April, 2014
 **/
 
 // Options processing
@@ -44,7 +44,7 @@ if (typeof LIRoptions !== "undefined"){
 	};
 }
 	
-if (/*typeof LIR === "undefined"*/ true){
+if (typeof LIR === "undefined"){
 
 	if (typeof localStorage.LIRQueuedUpdates === "undefined"){
 		localStorage.LIRQueuedUpdates = 0;
@@ -105,7 +105,7 @@ if (/*typeof LIR === "undefined"*/ true){
 				if (typeof(type) !== "undefined"){
 					if (type == "single"){
 						this.started = true;
-						this.updateStatus(true, "Processing");
+						this.updateStatus(true, LIR.getMessage("process"));
 						this.type = "single";
 					}else if (type == "multi"){
 						this.started = true;
@@ -116,7 +116,7 @@ if (/*typeof LIR === "undefined"*/ true){
 						}
 						
 						if (this.queuePosition != localStorage.LIRQueuedUpdatesPos){
-							this.updateStatus("Number " + (this.queuePosition - localStorage.LIRQueuedUpdatesPos) + " on wait list");
+							this.updateStatus( LIR.getMessage( "waitlist", (this.queuePosition - localStorage.LIRQueuedUpdatesPos) ) );
 							setTimeout(function(){
 								objectInst.start(type, oldName, newName, reason, callback)
 							}, 
@@ -124,7 +124,7 @@ if (/*typeof LIR === "undefined"*/ true){
 							return false;
 						}
 						
-						this.updateStatus("Processing");
+						this.updateStatus(LIR.getMessage("process"));
 						this.type = "multi";
 					}else{
 						if (console) console.log("Incorrect type specified");
@@ -132,7 +132,7 @@ if (/*typeof LIR === "undefined"*/ true){
 					}
 				}else{
 					this.started = true;
-					this.updateStatus(true, "Processing");
+					this.updateStatus(true, LIR.getMessage("process"));
 					this.type = "single";
 				}
 				
@@ -163,9 +163,16 @@ if (/*typeof LIR === "undefined"*/ true){
 							localStorage.LIRQueuedUpdatesPos++;
 							delete this.queuePosition;
 						}
-						this.updateStatus(false, "File already added to queue, or destination name is already queued to be used.");
+						
+						if (this.queueData[i].oldImage == oldImageName || this.queueData[i].newImage == oldImageName){
+							var errorMessage = "alreadyinqueue";
+						}else{
+							var errorMessage = "nameinuse";
+						}
+						
+						this.updateStatus(false, LIR.getMessage(errorMessage));
 						if (typeof(callback) === "function"){
-							callback(false);
+							callback(false, errorMessage);
 						}
 						return false;
 					}
@@ -178,9 +185,9 @@ if (/*typeof LIR === "undefined"*/ true){
 						localStorage.LIRQueuedUpdatesPos++;
 						delete this.queuePosition;
 					}
-					this.updateStatus(false, "Invalid file extension");
+					this.updateStatus(false, LIR.getMessage("invalidextension"));
 					if (typeof(callback) === "function"){
-						callback(false);
+						callback(false, "invalidextension");
 					}
 					return false;
 				}
@@ -272,9 +279,9 @@ if (/*typeof LIR === "undefined"*/ true){
 											localStorage.LIRQueuedUpdatesPos++;
 											delete objectInst.queuePosition;
 										}
-										objectInst.updateStatus(false, "File used in blog comment. Unable to update blog comments.");
+										objectInst.updateStatus(false, LIR.getMessage("blogcomment"));
 										if (typeof(callback) === "function"){
-											callback(false);
+											callback(false, "blogcomment");
 										}
 									}
 									
@@ -286,9 +293,9 @@ if (/*typeof LIR === "undefined"*/ true){
 										localStorage.LIRQueuedUpdatesPos++;
 										delete objectInst.queuePosition;
 									}
-									objectInst.updateStatus(false, "File not being used on any pages");
+									objectInst.updateStatus(false, LIR.getMessage("filenotused"));
 									if (typeof(callback) === "function"){
-										callback(false);
+										callback(false, "filenotused");
 									}
 								}
 							});
@@ -299,9 +306,9 @@ if (/*typeof LIR === "undefined"*/ true){
 							localStorage.LIRQueuedUpdatesPos++;
 							delete objectInst.queuePosition;
 						}
-						objectInst.updateStatus(false, "File name already exists");
+						objectInst.updateStatus(false, LIR.getMessage("destinuse"));
 						if (typeof(callback) === "function"){
-							callback(false);
+							callback(false, "destinuse");
 						}
 					}
 				});
@@ -700,12 +707,12 @@ if (/*typeof LIR === "undefined"*/ true){
 		},
 
 		removeFromQueue: function(queueOldName){
-			LIR.queueData = JSON.parse(localStorage[wgUserName + "_LIRQueueData"]);
+			LIR.instances[0].queueData = JSON.parse(localStorage[wgUserName + "_LIRQueueData"]);
 
-			LIR.queueData.splice(queueOldName, 1);
+			LIR.instances[0].queueData.splice(queueOldName, 1);
 
-			if (LIR.queueData.length > 0){
-				LIR.storeQueue(function(){
+			if (LIR.instances[0].queueData.length > 0){
+				LIR.instances[0].storeQueue(function(){
 					$("#LIRNotification").slideUp("fast", function(){this.remove();});
 				});
 			}else{
@@ -731,6 +738,41 @@ if (/*typeof LIR === "undefined"*/ true){
 				$("#LIRLog div:odd").css("background-color", "grey");
 			}
 		},
+		
+		getMessage: function(message, number){
+			switch (message){
+				case "":
+					break;
+				case "nameinuse":
+					return "Destination name is already queued to be used or is currently in use.";
+				case "alreadyinqueue":
+					return "File already added to queue.";
+				case "invalidextension":
+					return "Invalid file extension."
+				case "blogcomment":
+					return "File used in blog comment. Unable to update blog comments.";
+				case "filenotused":
+					return "File not being used on any pages.";
+				case "destinuse":
+					return "Destination name already in use.";
+				case "process":
+					return "Processing...";
+				case "success":
+					return "Successful.";
+				case "varsundef":
+					return "Variables undefined, check code.";
+				case "waitlist":
+					return "Number " + number + " on wait list";
+				case "queueupdate":
+					return "Queue updated.";
+				case "nothinginqueue":
+					return "There is currently nothing in the queue.";
+				case "trydiffname":
+					return "Please enter a file name.";
+				case "toundef":
+					return "The \"To\" variable is not set.";
+			}
+		},
 
 		failedLog: function(oldI, newI, page){
 			if (typeof(LIR.logFailed) === "undefined"){
@@ -748,9 +790,9 @@ if (/*typeof LIR === "undefined"*/ true){
 			if (typeof (localStorage[wgUserName + "_LIRQueueData"]) !== "undefined"){
 				LIR.queueData = JSON.parse(localStorage[wgUserName + "_LIRQueueData"]);
 			}else{
-				document.getElementById("LIRQueue").innerHTML = "<div>There is currently nothing in the queue.</div>";
+				document.getElementById("LIRQueue").innerHTML = "<div>" + LIR.getMessage("nothinginqueue") + "</div>";
 				document.getElementById("LIRQueueLengthBox").innerHTML = "0";
-				LIR.log("Queue updated.");
+				LIR.log( LIR.getMessage("queueupdate") );
 				return false;
 			}
 
@@ -764,7 +806,7 @@ if (/*typeof LIR === "undefined"*/ true){
 			document.getElementById("LIRQueue").innerHTML = queueToAdd;
 			document.getElementById("LIRQueueLengthBox").innerHTML = LIR.queueData.length;
 			$("#LIRQueue div:odd").css("background-color", "lightgrey");
-			LIR.log("Queue updated.");
+			LIR.log( LIR.getMessage("queueupdate") );
 		},
 
 		updateNamespaceSelection: function(){
@@ -843,26 +885,38 @@ if (/*typeof LIR === "undefined"*/ true){
 		},
 	
 		addToQueueButton: function(buttonId) {
-			$("#fuau-button-" + buttonId).css("display", "none");
-		
-			LIR.instances[buttonId].start("multi", decodeURIComponent( $("#fuau-button-" + buttonId).attr("data-fuau-from") ), decodeURIComponent( $("#fuau-button-" + buttonId).attr("data-fuau-to").replace(/_/g, " ") ), "Test Reason", function(successful){
-				if (successful){
-					LIR.instances[buttonId].updateStatus(false, "Successful");
+			if ( $("#fuau-button-" + buttonId).attr("data-fuau-from") != "undefined" && $("#fuau-button-" + buttonId).attr("data-fuau-from") != ""){
+				if ( $("#fuau-button-" + buttonId).attr("data-fuau-to") != "undefined" && $("#fuau-button-" + buttonId).attr("data-fuau-to") != ""){
+					$("#fuau-button-" + buttonId).css("display", "none");
+				
+					LIR.instances[buttonId].start("multi", decodeURIComponent( $("#fuau-button-" + buttonId).attr("data-fuau-from") ), decodeURIComponent( $("#fuau-button-" + buttonId).attr("data-fuau-to").replace(/_/g, " ") ), "Test Reason", function(successful, error){
+						if (successful){
+							LIR.instances[buttonId].updateStatus(false, LIR.getMessage("success"));
+						}
+						
+						if (typeof error != "undefined"){
+							switch (error){
+								case "nameinuse":
+								case "invalidextension":
+								case "destinuse":
+									$("#fuau-button-" + buttonId).css("display", "inline-block");
+									LIR.showFuauModal( $("#fuau-button-" + buttonId), buttonId, error );
+									break;
+							}
+						}
+					});
 				}else{
-					$("#fuau-button-" + buttonId).css("display", "inline-block");
+					LIR.showFuauModal( $("#fuau-button-" + buttonId), buttonId, "toundef");
 				}
-			});
-			/*
-			console.log( decodeURIComponent( $("#fuau-button-" + buttonId).attr("data-fuau-from") ) );
-			console.log( decodeURIComponent( $("#fuau-button-" + buttonId).attr("data-fuau-to") ) );
-			console.log("Using the queue button");
-			*/
+			}else{
+				LIR.instances[buttonId].updateStatus(false, LIR.getMessage("varsundef"));
+			}
 		},
 		
-		showFuauModal: function(){
+		showFuauModal: function(buttonObj, Id, message){
 			$.showCustomModal(
 				"Queue addition",
-				'<fieldset><strong>Old file name: </strong><br /><input type="text" id="oldName" placeholder="File:TSAtBarnS3 E5.png" style="width: 500px"></input><br /><strong>New file name: </strong><br /><input type="text" id="newName" placeholder="File:Twilight Sparkle at the barn S3E5.png" style="width: 500px;"></input></feildset>',
+				'<fieldset><span> ' + LIR.getMessage(message) + '  ' + LIR.getMessage("trydiffname") + ' </span><br><span style="font-weight:bold">Old file name:</span><br><input disabled id="modalOldName" type="text" style="width:400px" value="' + decodeURIComponent( buttonObj.attr("data-fuau-from") ).replace(/_/g, " ") + '" /><br><span style="font-weight:bold">New file name:</span><br><input id="modalNewName" type="text" style="width:400px" value="' + (typeof buttonObj.attr("data-fuau-to") != "undefined" ? decodeURIComponent( buttonObj.attr("data-fuau-to") ).replace(/_/g, " ") : "") + '" /><br><input id="modalId" type="text" value="' + Id + '" style="display: none;" /></fieldset>',
 				{
 					id: "fuauModal",
 					width: 650,
@@ -877,8 +931,15 @@ if (/*typeof LIR === "undefined"*/ true){
 						{
 							id: "submit",
 							defaultButton: true,
-							message: "Add to queue"
-							//handler: LIR.addToQueueButton()
+							message: "Add to queue",
+							handler: function(){
+								var Id = $("#modalId").val();
+								if ( $("#modalNewName").val() != "" ){
+									$("#fuau-button-" + Id).attr( "data-fuau-to", encodeURIComponent( $("#modalNewName").val() ).replace(/'/g, "%27") );
+									$(".close").click();
+									LIR.addToQueueButton(Id);
+								}
+							}
 						}
 					],
 					callback: function(){
@@ -894,8 +955,11 @@ if (/*typeof LIR === "undefined"*/ true){
 		}
 	};
 }
-		
+
+/* Actions performed on page load to add script elements */
+
 if (wgPageName.indexOf("Special:MovePage/File:") != -1 && Storage){
+	/* Move file page */
 	LIR.instances[0] = new LIR.constructInstance(0);
 	LIR.appendButtonText = "<a style='margin-left: 20px;' class='wikia-button' onclick='LIR.instances[0].start(\"single\")'>" + LIRoptions.singleButtonText + "</a><a style='margin-left: 20px;' class='wikia-button' onclick='LIR.instances[0].start(\"multi\")'>" + LIRoptions.queueButtonText + "</a>";
 
@@ -906,11 +970,12 @@ if (wgPageName.indexOf("Special:MovePage/File:") != -1 && Storage){
 		LIR.appendButtonText += ('<br /><div style="font-weight: bold; width: 850px; white-space: normal;">' + LIRoptions.bottomMessage + '</div>');
 	}
 	
-	LIR.appendButtonText += ('<br /><div style="font-weight: bold; width: 850px; white-space: normal;">Script Updated 24th of March, 2014.  <a href="http://dev.wikia.com/wiki/FileUsageAuto-update">More information</a>.  Please report bugs or missed replacements <a href="http://dev.wikia.com/wiki/Talk:FileUsageAuto-update">here</a> in detail.</div>');
+	LIR.appendButtonText += ('<br /><div style="font-weight: bold; width: 850px; white-space: normal;">Script Updated 10th of April, 2014.  More information about updates and functionality can be found <a href="http://dev.wikia.com/wiki/FileUsageAuto-update">here</a>.  Please report bugs or missed replacements <a href="http://dev.wikia.com/wiki/Talk:FileUsageAuto-update">here</a> in detail.</div>');
 	
 	$('td.mw-submit').append(LIR.appendButtonText);
 	$('#mw-movepage-table tr:eq(4)').after('<tr><td></td><td class="mw-input"><label><input type="checkbox" id="LIRNamespaceToggleCheck" onchange="LIR.updateNamespaceSelection()" ' + localStorage[wgUserName + "_LIRNamespaceSelection"] + '>&nbsp;Include <span style="font-weight: bold">links</span> in all namespaces eg: [[:File:File.png]] <span style="font-size: 9px;">(only includes Main by default) only affects ' + LIRoptions.singleButtonText + ' option</span></label></td></tr>');
 }else if (wgCanonicalNamespace == "File" && Storage){
+	/* File page */
 	LIR.instances[0] = new LIR.constructInstance(0);
 	$("#WikiaPageHeader nav ul").append("<li><a onclick='LIR.showQueueModal()'>Queue</a></li>");
 	if (typeof localStorage[wgUserName + "_LIRQueueData"] !== "undefined"){
@@ -919,18 +984,20 @@ if (wgPageName.indexOf("Special:MovePage/File:") != -1 && Storage){
 	
 		for (var i in LIR.instances[0].queueData){
 			if (wgTitle.match(new RegExp(LIR.instances[0].queueData[i].oldImage.replace(/\*/g, "\\*").replace(/\?/g, "\\?").replace(/\./g, "\\.").replace(/( |_)/g, "[ _]*?").replace(/\(/g, "\\(").replace(/\)/g, "\\)").replace(/\+/g, "\\+"), "gi") ) != null){
-				$("#WikiaPageHeader").after('<div style="position: relative; width: 80%; margin: 0px auto 10px auto; padding-bottom: 10px; border: 2px solid lightgreen; background-color: white;" id="LIRNotification"><img src="http://upload.wikimedia.org/wikipedia/commons/b/bd/Checkmark_green.svg" style="height: 40px; float:left; margin: 5px 20px;" /><span style="float: left; word-wrap:break-word; margin-top: 10px; font-size: 14px; padding-bottom: 10px;">This image is currently in your queue to be renamed!<br>New name: <span style="font-weight: bold;">'+LIR.instances[0].queueData[i].newImage+'</span></span><div style="position: absolute; bottom: 2px; right: 2px;"><a onclick="LIR.removeFromQueue(' + i + ')" style="cursor: pointer">Remove from queue</a></div><div style="clear:both;"></div></div>');
+				$("#WikiaArticle").prepend('<table id="LIRNotification" class="metadata plainlinks ambox ambox-notice" style="border-left: 10px solid lightgreen;"><tbody><tr><td class="mbox-image"><div style="width: 52px;"><img alt="" src="http://upload.wikimedia.org/wikipedia/commons/b/bd/Checkmark_green.svg" width="46" height="40"></div></td><td class="mbox-text" style="">This image is currently in your queue to be renamed!<br>New name: <span style="font-weight: bold;">'+LIR.instances[0].queueData[i].newImage+'</span></td></tr><tr><td>&nbsp;</td><td style="text-align: right;"><a onclick="LIR.removeFromQueue(' + i + ')" style="cursor: pointer">Remove from queue</a></td></tr></tbody></table>');
 				break;
 			}
 		}
 	}
 }else if ($(".fuau").length > 0){
+	/* Add to queue button */
 	LIR.buttonIndex = 0;
 	$(".fuau").each(function(){
 		LIR.instances[LIR.buttonIndex] = new LIR.constructInstance(LIR.buttonIndex);
 		$(this).html("<a class='wikia-button' id='fuau-button-" + LIR.buttonIndex + "' data-fuau-from='" + $(this).attr('data-fuau-from') + "' data-fuau-to='" + $(this).attr('data-fuau-to') + "' onclick='LIR.addToQueueButton(" + LIR.buttonIndex + ")'>Add to queue</a><span id='liveLoader-" + LIR.buttonIndex + "' style='display:none'><img src='http://slot1.images.wikia.nocookie.net/__cb1395341051/common/skins/common/images/ajax.gif' /></span><span id='queueStatus-" + LIR.buttonIndex + "' style='font-weight: bold'></span>");
 		LIR.buttonIndex++;
 	});
+	delete LIR.buttonIndex;
 }
 
 //</nowiki>
