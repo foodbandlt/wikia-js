@@ -6,6 +6,7 @@
 * Updates file links in use on the wiki when image is renamed.
 *
 * @Author Foodbandlt
+* @Author Jr Mime
 * Last updated 10th April, 2014
 **/
 
@@ -206,12 +207,12 @@ if (typeof LIR === "undefined"){
 						$.getJSON("/api.php?action=query&list=imageusage&iutitle=File:"+encodeURIComponent(oldImageName.replace(/ /g, "_")).replace(/"/g, "%22").replace(/'/g, "%27")+"&iulimit=20&format=json", function(result){
 							var imageUsage = result.query.imageusage;
 							
-							$.getJSON("/api.php?action=query" + namespaceSelection + "&bllimit=20&list=backlinks&bltitle=File:" + encodeURIComponent(oldImageName.replace(/ /g, "_")).replace(/"/g, "%22").replace(/'/g, "%27") + "&format=json", function(result){
+							$.getJSON("/api.php?action=query" + namespaceSelection + "&list=backlinks&bltitle=File:" + encodeURIComponent(oldImageName.replace(/ /g, "_")).replace(/"/g, "%22").replace(/'/g, "%27") + "&format=json", function(result){
 								var imageLinks = result.query.backlinks;
 								var totalImageUsage = imageUsage.concat(imageLinks);
 								
 								if (console) console.log("Image usage successfully retrieved");
-								if (imageUsage.length > 0 || imagesLinks.length > 0){
+								if (totalImageUsage.length > 0){
 								
 									/* Resets queue-related variables if only renaming and replacing a single image */
 									if (objectInst.type == "single"){
@@ -220,8 +221,8 @@ if (typeof LIR === "undefined"){
 										objectInst.queueDataList = [];
 										objectInst.pageKey = [];
 										
-										for (var currentPage = 0; currentPage < imageUsage.length; currentPage++){
-											var title = imageUsage[currentPage].title;
+										for (var currentPage = 0; currentPage < totalImageUsage.length; currentPage++){
+											var title = totalImageUsage[currentPage].title;
 											/* Temporary until Wikia fixes issue with editing blog comments through the API */
 											if (title.search(/User blog comment/i) != -1){
 												var LIRBlogComment = true;
@@ -241,8 +242,8 @@ if (typeof LIR === "undefined"){
 											reason: reason
 										});
 											
-										for (var currentPage = 0; currentPage < imageUsage.length; currentPage++){
-											var title = imageUsage[currentPage].title;
+										for (var currentPage = 0; currentPage < totalImageUsage.length; currentPage++){
+											var title = totalImageUsage[currentPage].title;
 											/* Temporary until Wikia fixes issue with editing blog comments through the API */
 											if (title.search(/User blog comment/i) != -1){
 												var LIRBlogComment = true;
