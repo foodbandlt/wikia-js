@@ -7,7 +7,7 @@
 *
 * @Author Foodbandlt
 * @Author Jr Mime
-* Last updated 10th April, 2014
+* Last updated 21 April, 2014
 **/
 
 // Options processing
@@ -890,7 +890,7 @@ if (typeof LIR === "undefined"){
 				if ( $("#fuau-button-" + buttonId).attr("data-fuau-to") != "undefined" && $("#fuau-button-" + buttonId).attr("data-fuau-to") != ""){
 					$("#fuau-button-" + buttonId).css("display", "none");
 				
-					LIR.instances[buttonId].start("multi", decodeURIComponent( $("#fuau-button-" + buttonId).attr("data-fuau-from") ), decodeURIComponent( $("#fuau-button-" + buttonId).attr("data-fuau-to").replace(/_/g, " ") ), "Test Reason", function(successful, error){
+					LIR.instances[buttonId].start("multi", decodeURIComponent( $("#fuau-button-" + buttonId).attr("data-fuau-from") ), decodeURIComponent( $("#fuau-button-" + buttonId).attr("data-fuau-to").replace(/_/g, " ") ), "Using [[w:c:dev:FileUsageAuto-update#Other_features|FileUsageAuto-update]].", function(successful, error){
 						if (successful){
 							LIR.instances[buttonId].updateStatus(false, LIR.getMessage("success"));
 						}
@@ -971,7 +971,7 @@ if (wgPageName.indexOf("Special:MovePage/File:") != -1 && Storage){
 		LIR.appendButtonText += ('<br /><div style="font-weight: bold; width: 850px; white-space: normal;">' + LIRoptions.bottomMessage + '</div>');
 	}
 	
-	LIR.appendButtonText += ('<br /><div style="font-weight: bold; width: 850px; white-space: normal;">Script Updated 10th of April, 2014.  More information about updates and functionality can be found <a href="http://dev.wikia.com/wiki/FileUsageAuto-update">here</a>.  Please report bugs or missed replacements <a href="http://dev.wikia.com/wiki/Talk:FileUsageAuto-update">here</a> in detail.</div>');
+	LIR.appendButtonText += ('<br /><div style="font-weight: bold; width: 850px; white-space: normal;">Script Updated 21st of April, 2014.  More information about updates and functionality can be found <a href="http://dev.wikia.com/wiki/FileUsageAuto-update">here</a>.  Please report bugs or missed replacements <a href="http://dev.wikia.com/wiki/Talk:FileUsageAuto-update">here</a> in detail.</div>');
 	
 	$('td.mw-submit').append(LIR.appendButtonText);
 	$('#mw-movepage-table tr:eq(4)').after('<tr><td></td><td class="mw-input"><label><input type="checkbox" id="LIRNamespaceToggleCheck" onchange="LIR.updateNamespaceSelection()" ' + localStorage[wgUserName + "_LIRNamespaceSelection"] + '>&nbsp;Include <span style="font-weight: bold">links</span> in all namespaces eg: [[:File:File.png]] <span style="font-size: 9px;">(only includes Main by default) only affects ' + LIRoptions.singleButtonText + ' option</span></label></td></tr>');
