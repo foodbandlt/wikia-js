@@ -3,10 +3,14 @@
 /**
 *
 * Description:
-* Updates page links in use on the wiki when image is renamed.
+* Updates page links in use on the wiki when the page is renamed.
 *
 * @Author Foodbandlt
-* Last updated 10th April, 2014
+* Using code by Jr Mime
+*
+* Last updated 12th of May, 2014
+
+/api.php?action=query&list=allpages&apprefix=&apnamespace=" + $.getUrlVar('namespace') + "&aplimit=5000
 **/
 
 // Options processing
@@ -20,7 +24,7 @@ if (typeof PRAoptions !== "undefined"){
 		editSummary: 'Updating page links (automatic)',
 	};
 }
-$.getJSON("/api.php?action=query&meta=userinfo&uiprop=groups", function(result){
+$.getJSON("/api.php?action=query&meta=userinfo&uiprop=groups&format=json", function(result){
 	if (result.query.userinfo.groups.indexOf("sysop") != -1){
 
 		if (typeof PRA === "undefined"){
@@ -60,6 +64,7 @@ $.getJSON("/api.php?action=query&meta=userinfo&uiprop=groups", function(result){
 					PRA.started = true;
 					PRA.updateStatus(true, PRA.getMessage("process"));
 					$("#PRAprocess").css("display", "none");
+					PRA.toggleInputs(false);
 
 					/* Sets variables used by the function */
 					PRA.oldName = decodeURIComponent($.getUrlVar('pagename').replace(/_/g, " ")).replace(/%22/g, '"').replace(/%27/g, "'"),
@@ -101,15 +106,13 @@ $.getJSON("/api.php?action=query&meta=userinfo&uiprop=groups", function(result){
 										if (typeof(PRABlogComment) === "undefined"){
 											PRA.updateStatus(false, PRA.getMessage("success"));
 											PRA.started = false;
+											PRA.toggleInputs(true);
 											$("#PRAprocess").css("display", "inline-block");
 											PRA.updateQueueListing();
-											/*
-											PRA.processQueue(function(){
-												window.location = "/wiki/" + encodeURIComponent(newName.replace(/ /g, "_")).replace(/"/g, "%22").replace(/'/g, "%27");
-											});
-											*/
 										}else{
+											PRA.started = false;
 											PRA.updateStatus(false, PRA.getMessage("blogcomment"));
+											PRA.toggleInputs(true);
 											if (typeof(callback) === "function"){
 												callback(false, "blogcomment");
 											}
@@ -120,6 +123,7 @@ $.getJSON("/api.php?action=query&meta=userinfo&uiprop=groups", function(result){
 										/* Else, prompt to use normal renaming, since this is kind of pointless otherwise */
 										PRA.started = false;
 										PRA.updateStatus(false, PRA.getMessage("filenotused"));
+										PRA.toggleInputs(true);
 										if (typeof(callback) === "function"){
 											callback(false, "filenotused");
 										}
@@ -129,6 +133,7 @@ $.getJSON("/api.php?action=query&meta=userinfo&uiprop=groups", function(result){
 						}else{
 							PRA.started = false;
 							PRA.updateStatus(false, PRA.getMessage("destinuse"));
+							PRA.toggleInputs(true);
 							if (typeof(callback) === "function"){
 								callback(false, "destinuse");
 							}
@@ -149,6 +154,7 @@ $.getJSON("/api.php?action=query&meta=userinfo&uiprop=groups", function(result){
 
 					/* Variable redeclaration */
 					PRA.started = true;
+					PRA.toggleInputs(false);
 					PRA.requestCompleted  = [];
 					PRA.pageData = [];
 					PRA.updateStatus(true, PRA.getMessage("process"));
@@ -336,7 +342,7 @@ $.getJSON("/api.php?action=query&meta=userinfo&uiprop=groups", function(result){
 							from: PRA.oldName,
 							to: PRA.newName,
 							reason: PRA.reason,
-							movetalk: true,
+							movetalk: false,
 							noredirect: true,
 							ignorewarnings: true,
 							token: mediaWiki.user.tokens.get("editToken"),
@@ -345,6 +351,8 @@ $.getJSON("/api.php?action=query&meta=userinfo&uiprop=groups", function(result){
 						contentType: "application/x-www-form-urlencoded",
 						error: function(){
 							alert("Unable to move page \"" + PRA.oldName + "\" to \"" + PRA.newName + "\".");
+							PRA.started = false;
+							PRA.toggleInputs(true);
 						},
 						success: function(result){
 							if (typeof result.error === "undefined"){
@@ -362,9 +370,13 @@ $.getJSON("/api.php?action=query&meta=userinfo&uiprop=groups", function(result){
 									PRA.movePage(callback);
 								}else{
 									alert(PRA.oldName + " was unable to be moved.");
+									PRA.started = false;
+									PRA.toggleInputs(true);
 								}
 							}else{
 								alert("The page \"" + PRA.oldName + "\" was unable to be moved to \"" + PRA.newName + "\" for reason: " + result.error.code + ".");
+								PRA.started = false;
+								PRA.toggleInputs(true);
 							}
 						}
 					});
@@ -376,10 +388,12 @@ $.getJSON("/api.php?action=query&meta=userinfo&uiprop=groups", function(result){
 				
 				toggleInputs: function(toggle){
 					if (toggle == false){
-						var disabled = "";
+						var disabled = true;
 					}else{
-					 var disabled = "disabled";
+						var disabled = false;
 					}
+					
+					$("#wpNewTitleMain, #wpReason").attr("disabled", disabled);
 				},
 				
 				getMessage: function(message, number){
@@ -388,14 +402,10 @@ $.getJSON("/api.php?action=query&meta=userinfo&uiprop=groups", function(result){
 							break;
 						case "nameinuse":
 							return "Destination name is already queued to be used or is currently in use.";
-						case "alreadyinqueue":
-							return "File already added to queue.";
-						case "invalidextension":
-							return "Invalid file extension."
 						case "blogcomment":
-							return "File used in blog comment. Unable to update blog comments.";
+							return "Page linked in blog comment. Unable to update blog comments due to API bug.";
 						case "filenotused":
-							return "File not being used on any pages.";
+							return "Page not linked on any pages.";
 						case "destinuse":
 							return "Destination name already in use.";
 						case "process":
@@ -404,16 +414,12 @@ $.getJSON("/api.php?action=query&meta=userinfo&uiprop=groups", function(result){
 							return "Successful.";
 						case "varsundef":
 							return "Variables undefined, check code.";
-						case "waitlist":
-							return "Number " + number + " on wait list";
 						case "queueupdate":
 							return "Queue updated.";
 						case "nothinginqueue":
 							return "There is currently nothing in the queue.";
 						case "trydiffname":
-							return "Please enter a file name.";
-						case "toundef":
-							return "The \"To\" variable is not set.";
+							return "Please enter a page name.";
 					}
 				},
 
@@ -453,9 +459,9 @@ $.getJSON("/api.php?action=query&meta=userinfo&uiprop=groups", function(result){
 		/* Actions performed on page load to add script elements */
 
 		if (mw.config.get('wgCanonicalSpecialPageName') === 'Blankpage' && $.getUrlVar('blankspecial') === 'pageusageupdate') {
-			var decodedOldPage = decodeURIComponent($.getUrlVar('pagename').replace(/_/g, " ")).replace(/%22/g, '"').replace(/%27/g, "'");
+			var decodedOldPage = decodeURIComponent($.getUrlVar('pagename').replace(/_/g, " ")).replace(/(%22|")/g, '&quot;').replace(/(%27|')/g, "&#39;");
 			(function() {
-		/* Text */		var form = '<div class="AdminDashboardGeneralHeader AdminDashboardArticleHeader"><h1>Renaming Page:' + $.getUrlVar('pagename') + '</h1></div>Using the form below will rename apage by changing the page names on pages that the page is used on. Be sure to check <a href="/wiki/Special:WantedCategories">wanted categories</a>. You are responsible for making sure that links continue to point where they are supposed to go.<br /><br />Note that the page will <strong>not</strong> be moved if there is already a page at the new title.<br /><br /><strong>Warning!</strong> This can be drastic and unexpected for a popular page; please be sure you understand the consequences of this before proceeding.<br />'
+		/* Text */		var form = '<div class="AdminDashboardGeneralHeader AdminDashboardArticleHeader"><h1>Renaming Page:' + decodedOldPage + '</h1></div>Using the form below will rename apage by changing the page names on pages that the page is used on. Be sure to check <a href="/wiki/Special:WantedCategories">wanted categories</a>. You are responsible for making sure that links continue to point where they are supposed to go.<br /><br />Note that the page will <strong>not</strong> be moved if there is already a page at the new title.<br /><br /><strong>Warning!</strong> This can be drastic and unexpected for a popular page; please be sure you understand the consequences of this before proceeding.<br />'
 		/* Current name */		+ '<fieldset><legend>Rename page & update usage</legend><table border="0" id="mw-renamepage-table"><tr><td class="mw-label">Current name:</td><td class="mw-input"><strong><a href="/wiki/' + $.getUrlVar('pagename') + '">' + decodedOldPage + '</a></strong></td></tr>'
 		/* Rename page */		+ '<tr><td class="mw-label">Rename page:</td><td class="mw-input"><input name="wpNewTitleMain" size="79.5" value="' + decodedOldPage + '" type="text" id="wpNewTitleMain" maxlength="255"></td></tr>'
 		/* Reason box */		+ '<tr><td class="mw-label">Reason:</td><td class="mw-input"><textarea name="wpReason" id="wpReason" cols="60" rows="2" maxlength="255"></textarea></td></tr>'
@@ -468,12 +474,12 @@ $.getJSON("/api.php?action=query&meta=userinfo&uiprop=groups", function(result){
 			
 			document.title = 'Page Rename Auto-Update';
 			PRA.updateQueueListing();
-		}else if (wgCanonicalNamespace != "Special" && wgCanonicalNamespace != "Mediawiki"){
+		}else if (wgCanonicalNamespace != "Special" && wgCanonicalNamespace != "Mediawiki" && wgCanonicalNamespace != "Category" && wgCanonicalNamespace != "Category Talk" && wgCanonicalNamespace != "Talk" ){
 			/* Page */
-			$('.wikia-menu-button .WikiaMenuElement').append(
+			$('#WikiaPageHeader nav ul').append(
 				$('<li/>').append(
 					$('<a/>', {
-						'href': '/wiki/Special:BlankPage?blankspecial=pageusageupdate&pagename=' + encodeURIComponent(mw.config.get('wgPageName').replace(/ /g, "_")).replace(/"/g, "%22").replace(/'/g, "%27"),
+						'href': '/wiki/Special:BlankPage?blankspecial=pageusageupdate&pagename=' + encodeURIComponent(mw.config.get('wgPageName').replace(/ /g, "_")) + '&namespace=' + wgNamespaceNumber,
 						'title': 'Rename&Update',
 						'html': 'Rename&Update'
 					})
